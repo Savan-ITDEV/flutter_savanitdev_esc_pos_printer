@@ -7,9 +7,10 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 class MockFlutterSavanitdevPrinterPlatform
     with MockPlatformInterfaceMixin
     implements FlutterSavanitdevPrinterPlatform {
-
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
+
+
 
   @override
   Future<String?> cancelChinese() {
@@ -102,7 +103,8 @@ class MockFlutterSavanitdevPrinterPlatform
   }
 
   @override
-  Future<String?> printImgNet(String ip, String base64String, int width, bool isDisconnect) {
+  Future<String?> printImgNet(
+      String ip, String base64String, int width, bool isDisconnect) {
     // TODO: implement printImgNet
     throw UnimplementedError();
   }
@@ -148,18 +150,34 @@ class MockFlutterSavanitdevPrinterPlatform
     // TODO: implement tryGetUsbPermission
     throw UnimplementedError();
   }
+
+  @override
+  Future<String?> printBLEinPrinter(int isCut) {
+    // TODO: implement printBLEinPrinter
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<String?> printBLEImgAndSet(String base64String, int width, int isCut) {
+    // TODO: implement printBLEImgAndSet
+    throw UnimplementedError();
+  }
 }
 
 void main() {
-  final FlutterSavanitdevPrinterPlatform initialPlatform = FlutterSavanitdevPrinterPlatform.instance;
+  final FlutterSavanitdevPrinterPlatform initialPlatform =
+      FlutterSavanitdevPrinterPlatform.instance;
 
   test('$MethodChannelFlutterSavanitdevPrinter is the default instance', () {
-    expect(initialPlatform, isInstanceOf<MethodChannelFlutterSavanitdevPrinter>());
+    expect(
+        initialPlatform, isInstanceOf<MethodChannelFlutterSavanitdevPrinter>());
   });
 
   test('getPlatformVersion', () async {
-    FlutterSavanitdevPrinter flutterSavanitdevPrinterPlugin = FlutterSavanitdevPrinter();
-    MockFlutterSavanitdevPrinterPlatform fakePlatform = MockFlutterSavanitdevPrinterPlatform();
+    FlutterSavanitdevPrinter flutterSavanitdevPrinterPlugin =
+        FlutterSavanitdevPrinter();
+    MockFlutterSavanitdevPrinterPlatform fakePlatform =
+        MockFlutterSavanitdevPrinterPlatform();
     FlutterSavanitdevPrinterPlatform.instance = fakePlatform;
 
     expect(await flutterSavanitdevPrinterPlugin.getPlatformVersion(), '42');

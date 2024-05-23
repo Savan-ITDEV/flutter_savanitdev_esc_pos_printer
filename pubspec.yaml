@@ -1,11 +1,11 @@
 name: flutter_savanitdev_printer
-description: "A new Flutter project."
-version: 0.0.1
-homepage:
+description: "this package create by savanitdev for using printer and support any language "
+version: 1.0.0
+homepage: https://github.com/Savan-ITDEV/flutter_savanitdev_esc_pos_printer
 
 environment:
-  sdk: '>=3.2.6 <4.0.0'
-  flutter: '>=3.3.0'
+  sdk: ">=3.2.6 <4.0.0"
+  flutter: ">=3.3.0"
 
 dependencies:
   flutter:

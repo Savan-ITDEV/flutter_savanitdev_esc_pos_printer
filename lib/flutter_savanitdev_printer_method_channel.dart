@@ -35,7 +35,6 @@ class MethodChannelFlutterSavanitdevPrinter
     return version;
   }
 
-  @override
   Future<String?> checkStatusBLE() async {
     final version = await methodChannel.invokeMethod<String>('checkStatusBLE');
     return version;
