@@ -30,9 +30,6 @@ samples, guidance on mobile development, and a full API reference.
 - currently I config just support for Thai languages and Vietnam
   📍 if you need print more languages please contact me ^^
 
-[url=https://ibb.co/WPVgBXY][img]https://i.ibb.co/GtHcCDb/Screenshot-1716456174.png[/img][/url]
-[url=https://ibb.co/xf5ThBy][img]https://i.ibb.co/2sK4qCw/Screenshot-1716456182.png[/img][/url]
-
 ## Support
 
 | Expo | ✅  
@@ -47,10 +44,10 @@ samples, guidance on mobile development, and a full API reference.
 | set code page        | ✅      | ✅  |
 | print test code page | ✅      | ✅  |
 
-auto change languages Thai and Vietnam ✅: Full option [contact me][https://www.facebook.com/SavanitDev]
-print info printer ✅: Full option [contact me][https://www.facebook.com/SavanitDev]
-set codePage ✅: Full option [contact me][https://www.facebook.com/SavanitDev]
-need more languages ✅ [contact me][https://www.facebook.com/SavanitDev]
+auto change languages Thai and Vietnam ✅: Full option [contact me](https://www.facebook.com/SavanitDev)
+print info printer ✅: Full option [contact me](https://www.facebook.com/SavanitDev)
+set codePage ✅: Full option [contact me](https://www.facebook.com/SavanitDev)
+need more languages ✅ [contact me](https://www.facebook.com/SavanitDev)
 
 ## Support
 
