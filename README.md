@@ -61,8 +61,8 @@ need more languages ✅ [contact me](https://www.facebook.com/SavanitDev)
 <div style="display: flex; flex-direction: row; align-self: center; align-items: center">
 <img src="https://i.ibb.co/GtHcCDb/Screenshot-1716456174.png" alt="screenshot" width="300" height="550"/>
 <img src="https://i.ibb.co/2sK4qCw/Screenshot-1716456182.png" alt="bill" width="300" height="550"/>
-<img src="https://i.ibb.co/Rg6VfkW/photo-6145642264483971071-y.jpg" alt="bill" width="370" height="550"/>
-<img src="https://i.ibb.co/2j57z5z/photo-6145642264483971060-y.jpg" alt="screenshot" width="370" height="620"/>
+<img src="https://i.ibb.co/Rg6VfkW/photo-6145642264483971071-y.jpg" alt="bill" width="370" height="620"/>
+<img src="https://i.ibb.co/2j57z5z/photo-6145642264483971060-y.jpg" alt="screenshot" width="370" height="550"/>
 </div>
 
 [Link download APK test app](https://drive.google.com/file/d/1sl5MhzqL78LQynNDHnRE5d3Rw3SRF2aP/view?usp=sharing)
