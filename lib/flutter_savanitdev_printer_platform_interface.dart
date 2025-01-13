@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'flutter_savanitdev_printer_method_channel.dart';
@@ -8,8 +10,7 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
 
   static final Object _token = Object();
 
-  static FlutterSavanitdevPrinterPlatform _instance =
-      MethodChannelFlutterSavanitdevPrinter();
+  static FlutterSavanitdevPrinterPlatform _instance = MethodChannelFlutterSavanitdevPrinter();
 
   /// The default instance of [FlutterSavanitdevPrinterPlatform] to use.
   ///
@@ -28,104 +29,74 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
-  Future<String?> connectNet(String ip) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> connectMultiXPrinter(String address, String type);
 
-  Future<String?> disconnectNet(String ip) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> disconnectXPrinter(String address);
 
-  Future<String?> disconnectBLE() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> removeConnection(String address);
 
-  Future<String?> onCreate() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> printRawDataESC(String address, String encode);
 
-  Future<String?> initBLE() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> printImgESCX(String address, String encode, int countCut, int width);
 
-  Future<String?> startScanBLE() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> cutESCX(String address);
 
-  Future<String?> connectBLE(String macAddress) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> pingDevice(String address, int timeout);
 
-  Future<String?> connectUSB(String usbAddress) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> startQuickDiscovery(int timeout);
 
-  Future findAvailableDevice() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> printImgZPL(String address, String encode, int printCount, int width, int x, int y);
 
-  Future reqBlePermission() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> printImgCPCL(String address, String encode, int width, int x, int y);
 
-  Future<String?> checkStatus() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> printImgTSPL(
+    String address,
+    String encode,
+    int width,
+    int widthBmp,
+    int height,
+    int m,
+    int n,
+    int x,
+    int y,
+  );
 
-  Future<String?> printBitmap() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> setPrintSpeed(String address, int speed);
 
-  Future<String?> printLangPrinter() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> setPrintOrientation(String address, String orientation);
 
-  Future<String?> setLang(String codePage) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> printRawDataCPCL(String address, String encode);
 
-  Future<String?> cancelChinese() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> printRawDataTSPL(String address, String encode);
 
-  Future<List<dynamic>?> getListDevice() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> setPrintDensity(String address, String density);
 
-  Future<String?> getLangModel() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> printerStatusZPL(String address, int timeout);
+  Future<String?> getUSBAddress();
 
-  Future<String?> tryGetUsbPermission() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+// ============= ZyWell Printer ==================//
 
-  Future<String?> printRawData(String ip, String encode, bool isDisconnect) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  Future<String?> connectZyWell(String address, String type);
+  Future<String?> disconnectZyWell(String address);
+  Future<String?> getPrinterStatusZyWell(String address);
+  Future<String?> printRawZyWell(String address, String encode);
+  Future<String?> printImgZyWell(String address, String encode, bool isCut, int width, int cutCount);
 
-  Future<String?> rawDataBLE(String encode) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
-
-  Future<String?> printBLEinPrinter(int isCut) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
-
-  Future<String?> image64BaseBLE(String base64String, int width, int isBLE) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
-
-  Future<String?> printBLEImgAndSet(String base64String, int width, int isCut) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
-
-  Future<String?> printImgNet(
-      String ip, String base64String, int width, bool isDisconnect) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
-
-  Future<String?> getUSB() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
+  // ============= ESC POS command ==================//
+  Future<List<int>> selectAlignment(String align);
+  Future<List<int>> selectCharacterSize(int n);
+  Future<List<int>> selectOrCancelBoldModel(int n);
+  Future<List<int>> selectCharacterCodePage(int n);
+  Future<List<int>> setBarcodeWidth(int n);
+  Future<List<int>> setBarcodeHeight(int n);
+  Future<List<int>> selectHRICharacterPrintPosition(int n);
+  Future<List<int>> selectInternationalCharacterSets(int n);
+  Future<List<int>> printBarcode(int m, int n, String content);
+  Future<List<int>> setAbsolutePrintPosition(int m, int n);
+  Future<List<int>> text(String text, String codePage);
+  Future<List<int>> printQRcode(int n, int errLevel, String code);
+  Future<List<int>> cut();
+  Future<List<int>> initializePrinter();
+  Future<List<int>> cancelChineseCharModel();
+  Future<List<int>> printAndFeedLine();
 }

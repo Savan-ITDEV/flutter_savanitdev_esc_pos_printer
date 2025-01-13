@@ -1,212 +1,352 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'flutter_savanitdev_printer_platform_interface.dart';
 
 /// An implementation of [FlutterSavanitdevPrinterPlatform] that uses method channels.
-class MethodChannelFlutterSavanitdevPrinter
-    extends FlutterSavanitdevPrinterPlatform {
+class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlatform {
   /// The method channel used to interact with the native platform.
   @visibleForTesting
   final methodChannel = const MethodChannel('flutter_savanitdev_printer');
 
   @override
-  Future<String?> onCreate() async {
-    final version = await methodChannel.invokeMethod<String>('onCreate');
-    return version;
-  }
-
-  @override
-  Future<String?> initBLE() async {
-    final version = await methodChannel.invokeMethod<String>('initBLE');
-    return version;
-  }
-
-  @override
-  Future<String?> startScanBLE() async {
-    final version = await methodChannel.invokeMethod<String>('startScanBLE');
-    return version;
-  }
-
-  @override
-  Future<List<dynamic>?> getListDevice() async {
-    final version = await methodChannel.invokeMethod('getListDevice');
-    return version;
-  }
-
-  Future<String?> checkStatusBLE() async {
-    final version = await methodChannel.invokeMethod<String>('checkStatusBLE');
-    return version;
-  }
-
-  @override
-  Future<String?> connectNet(String ip) async {
-    final version = await methodChannel.invokeMethod<String>('connectNet', ip);
-    return version;
-  }
-
-  @override
-  Future<String?> disconnectNet(String ip) async {
-    if (Platform.isIOS) {
-      final version =
-          await methodChannel.invokeMethod<String>('disconnectNet', ip);
-      return version;
-    } else {
-      final version = await methodChannel.invokeMethod<String>('disConnect');
-      return version;
-    }
-  }
-
-  @override
-  Future<String?> setLang(String codePage) async {
-    final version =
-        await methodChannel.invokeMethod<String>('setLang', codePage);
-    return version;
-  }
-
-  @override
-  Future<String?> printLangPrinter() async {
-    final version =
-        await methodChannel.invokeMethod<String>('printLangPrinter');
-    return version;
-  }
-
-  @override
-  Future<String?> getLangModel() async {
-    final version = await methodChannel.invokeMethod<String>('getLangModel');
-    return version;
-  }
-
-  @override
-  Future<String?> rawDataBLE(String encode) async {
-    final version =
-        await methodChannel.invokeMethod<String>('rawDataBLE', encode);
-    return version;
-  }
-
-  @override
-  Future<String?> image64BaseBLE(
-      String base64String, int width, int isBLE) async {
-    final version = await methodChannel
-        .invokeMethod<String>('image64BaseBLE', <String, dynamic>{
-      'width': width,
-      'isBLE': isBLE,
-      'base64String': base64String,
+  Future<String?> connectMultiXPrinter(String address, String type) async {
+    final version = await methodChannel.invokeMethod<String>('connectMultiXPrinter', <String, dynamic>{
+      'address': address,
+      'type': type,
     });
     return version;
   }
 
   @override
-  Future<String?> printBLEImgAndSet(
-      String base64String, int width, int isCut) async {
-    final version = await methodChannel
-        .invokeMethod<String>('printBLEImgAndSet', <String, dynamic>{
-      'width': width,
-      'isCut': isCut,
-      'base64String': base64String,
+  Future<String?> disconnectXPrinter(String address) async {
+    final version = await methodChannel.invokeMethod<String>('disconnectXPrinter', <String, dynamic>{
+      'address': address,
     });
     return version;
   }
 
   @override
-  Future<String?> printImgNet(
-      String ip, String base64String, int width, bool isDisconnect) async {
-    final version = await methodChannel
-        .invokeMethod<String>('printImgNet', <String, dynamic>{
-      'ip': ip,
-      'base64String': base64String,
-      'width': width,
-      'isDisconnect': isDisconnect,
+  Future<String?> removeConnection(String address) async {
+    final version = await methodChannel.invokeMethod<String>('removeConnection', <String, dynamic>{
+      'address': address,
     });
     return version;
   }
 
   @override
-  Future<String?> printRawData(
-      String ip, String encode, bool isDisconnect) async {
-    final version = await methodChannel
-        .invokeMethod<String>('printRawData', <String, dynamic>{
-      'ip': ip,
+  Future<String?> printRawDataESC(String address, String encode) async {
+    final version = await methodChannel.invokeMethod<String>('printRawDataESC', <String, dynamic>{
+      'address': address,
       'encode': encode,
-      'isDisconnect': isDisconnect,
     });
     return version;
   }
 
   @override
-  Future<String?> printBLEinPrinter(int isCut) async {
-    final version =
-        await methodChannel.invokeMethod<String>('printBLEinPrinter', isCut);
+  Future<String?> printImgESCX(String address, String encode, int countCut, int width) async {
+    final version = await methodChannel.invokeMethod<String>('printImgESCX', <String, dynamic>{
+      'address': address,
+      'encode': encode,
+      'countCut': countCut ?? 50,
+      'width': width,
+    });
     return version;
   }
 
   @override
-  Future<String?> connectBLE(String macAddress) async {
-    final version =
-        await methodChannel.invokeMethod<String>('connectBLE', macAddress);
+  Future<String?> cutESCX(String address) async {
+    final version = await methodChannel.invokeMethod<String>('cutESCX', <String, dynamic>{
+      'address': address,
+    });
     return version;
   }
 
   @override
-  Future<String?> disconnectBLE() async {
-    if (Platform.isIOS) {
-      final version = await methodChannel.invokeMethod<String>('disconnectBLE');
-      return version;
-    } else {
-      final version = await methodChannel.invokeMethod<String>('disConnect');
-      return version;
+  Future<String?> pingDevice(String address, int timeout) async {
+    final version = await methodChannel.invokeMethod<String>('pingDevice', <String, dynamic>{
+      'address': address,
+      'timeout': timeout,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> startQuickDiscovery(int timeout) async {
+    final version = await methodChannel.invokeMethod<String>('startQuickDiscovery', <String, dynamic>{
+      'timeout': timeout,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> printImgZPL(String address, String encode, int printCount, int width, int x, int y) async {
+    final version = await methodChannel.invokeMethod<String>('printImgZPL', <String, dynamic>{
+      'address': address,
+      'encode': encode,
+      'printCount': printCount,
+      'width': width,
+      'x': x,
+      'y': y,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> printImgCPCL(String address, String encode, int width, int x, int y) async {
+    final version = await methodChannel.invokeMethod<String>('printImgCPCL', <String, dynamic>{
+      'address': address,
+      'encode': encode,
+      'width': width,
+      'x': x,
+      'y': y,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> printImgTSPL(
+    String address,
+    String encode,
+    int width,
+    int widthBmp,
+    int height,
+    int m,
+    int n,
+    int x,
+    int y,
+  ) async {
+    final version = await methodChannel.invokeMethod<String>('printImgTSPL', <String, dynamic>{
+      'address': address,
+      'encode': encode,
+      'width': width,
+      'widthBmp': widthBmp,
+      'height': height,
+      'm': m,
+      'n': n,
+      'x': x,
+      'y': y,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> setPrintSpeed(String address, int speed) async {
+    final version = await methodChannel.invokeMethod<String>('setPrintSpeed', <String, dynamic>{
+      'address': address,
+      'speed': speed,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> setPrintOrientation(String address, String orientation) async {
+    final version = await methodChannel.invokeMethod<String>('setPrintOrientation', <String, dynamic>{
+      'address': address,
+      'orientation': orientation,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> printRawDataCPCL(String address, String encode) async {
+    final version = await methodChannel.invokeMethod<String>('printRawDataCPCL', <String, dynamic>{
+      'address': address,
+      'encode': encode,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> printRawDataTSPL(String address, String encode) async {
+    final version = await methodChannel.invokeMethod<String>('printRawDataTSPL', <String, dynamic>{
+      'address': address,
+      'encode': encode,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> setPrintDensity(String address, String density) async {
+    final version = await methodChannel.invokeMethod<String>('setPrintDensity', <String, dynamic>{
+      'address': address,
+      'density': density,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> printerStatusZPL(String address, int timeout) async {
+    final version = await methodChannel.invokeMethod<String>('printerStatusZPL', <String, dynamic>{
+      'address': address,
+      'timeout': timeout,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> getUSBAddress() async {
+    final version = await methodChannel.invokeMethod<String>('getUSBAddress');
+    return version;
+  }
+
+// ============= ZyWell Printer ==================//
+
+  @override
+  Future<String?> connectZyWell(String address, String type) async {
+    final version = await methodChannel.invokeMethod<String>('connectZyWell', <String, dynamic>{
+      'address': address,
+      'type': type,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> disconnectZyWell(String address) async {
+    final version = await methodChannel.invokeMethod<String>('disconnectZyWell', <String, dynamic>{
+      'address': address,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> getPrinterStatusZyWell(String address) async {
+    final version = await methodChannel.invokeMethod<String>('getPrinterStatusZyWell', <String, dynamic>{
+      'address': address,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> printRawZyWell(String address, String encode) async {
+    final version = await methodChannel.invokeMethod('printRawZyWell', <dynamic, dynamic>{
+      'address': address,
+      'encode': encode,
+    });
+    return version;
+  }
+
+  @override
+  Future<String?> printImgZyWell(String address, String encode, bool isCut, int width, int cutCount) async {
+    final version = await methodChannel.invokeMethod('printImgZyWell', <dynamic, dynamic>{
+      'address': address,
+      'encode': encode,
+      'isCut': isCut,
+      'width': width,
+      'cutCount': cutCount,
+    });
+    return version;
+  }
+
+// ============= ESC POS command ==================//
+
+  @override
+  Future<List<int>> selectAlignment(String align) async {
+    int num = 1;
+    if (align == "center") {
+      num = 1;
     }
-  }
-
-  @override
-  Future<String?> connectUSB(String usbAddress) async {
-    final version =
-        await methodChannel.invokeMethod<String>('connectUSB', usbAddress);
-    return version;
-  }
-
-  @override
-  findAvailableDevice() async {
-    final version =
-        await methodChannel.invokeMethod<String>('findAvailableDevice');
-    List<String> items =
-        version.toString().replaceAll('[', '').replaceAll(']', '').split(',');
-
-    // Trim extra spaces from each element
-    List<String> trimmedItems = items.map((item) => item.trim()).toList();
-
-    // Create a list of maps with name and address
-    List<Map<String, String>> nameAddressList = [];
-    for (int i = 0; i < trimmedItems.length; i += 2) {
-      if (i + 1 < trimmedItems.length) {
-        Map<String, String> map = {
-          'name': trimmedItems[i],
-          'deviceAddress': trimmedItems[i + 1]
-        };
-        nameAddressList.add(map);
-      }
+    if (align == "right") {
+      num = 2;
     }
-
-    return nameAddressList;
-  }
-
-  @override
-  reqBlePermission() async {
-    await methodChannel.invokeMethod('reqBlePermission');
-    // return version;
-  }
-
-  @override
-  tryGetUsbPermission() async {
-    final version =
-        await methodChannel.invokeMethod<String>('tryGetUsbPermission');
+    if (align == "left") {
+      num = 0;
+    }
+    final version = await methodChannel.invokeMethod('selectAlignment', {'n': num});
     return version;
   }
 
   @override
-  getUSB() async {
-    final version = await methodChannel.invokeMethod<String>('getUSB');
+  Future<List<int>> selectCharacterSize(int n) async {
+    final version = await methodChannel.invokeMethod('selectCharacterSize', {'n': n});
     return version;
   }
+
+  @override
+  Future<List<int>> selectOrCancelBoldModel(int n) async {
+    final version = await methodChannel.invokeMethod('selectOrCancelBoldModel', {'n': n});
+    return version;
+  }
+
+  @override
+  Future<List<int>> selectCharacterCodePage(int n) async {
+    final version = await methodChannel.invokeMethod('selectCharacterCodePage', {'n': n});
+    return version;
+  }
+
+  @override
+  Future<List<int>> setBarcodeWidth(int n) async {
+    final version = await methodChannel.invokeMethod('setBarcodeWidth', {'n': n});
+    return version;
+  }
+
+  @override
+  Future<List<int>> setBarcodeHeight(int n) async {
+    final version = await methodChannel.invokeMethod('setBarcodeHeight', {'n': n});
+    return version;
+  }
+
+  @override
+  Future<List<int>> selectHRICharacterPrintPosition(int n) async {
+    final version = await methodChannel.invokeMethod('selectHRICharacterPrintPosition', {'n': n});
+    return version;
+  }
+
+  @override
+  Future<List<int>> selectInternationalCharacterSets(int n) async {
+    final version = await methodChannel.invokeMethod('selectInternationalCharacterSets', {'n': n});
+    return version;
+  }
+
+  @override
+  Future<List<int>> printBarcode(int m, int n, String content) async {
+    final version = await methodChannel.invokeMethod('printBarcode', {'m': m, 'n': n, 'content': content});
+    return version;
+  }
+
+  @override
+  Future<List<int>> setAbsolutePrintPosition(int m, int n) async {
+    final version = await methodChannel.invokeMethod('setAbsolutePrintPosition', {'m': m, 'n': n});
+    return version;
+  }
+
+  @override
+  Future<List<int>> text(String text, String codePage) async {
+    final version = await methodChannel.invokeMethod('text', {'text': text, 'codePage': codePage ?? "cp874"});
+    return version;
+  }
+
+  @override
+  Future<List<int>> printQRcode(int n, int errLevel, String content) async {
+    final version = await methodChannel.invokeMethod('printQRcode', {'n': n, 'errLevel': errLevel, 'content': content});
+    return version;
+  }
+
+  @override
+  Future<List<int>> cut() async {
+    final version = await methodChannel.invokeMethod('cut');
+    return version;
+  }
+
+  @override
+  Future<List<int>> initializePrinter() async {
+    final version = await methodChannel.invokeMethod('initializePrinter');
+    return version;
+  }
+
+  @override
+  Future<List<int>> cancelChineseCharModel() async {
+    final version = await methodChannel.invokeMethod('cancelChineseCharModel');
+    return version;
+  }
+
+  @override
+  Future<List<int>> printAndFeedLine() async {
+    final version = await methodChannel.invokeMethod('printAndFeedLine');
+    return version;
+  }
+
+  // ============= ESC POS command ==================//
 }

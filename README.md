@@ -57,6 +57,14 @@ need more languages ✅ [contact me](https://www.facebook.com/SavanitDev)
 | Net       | ✅      | ✅  |
 | USB       | ✅      | ❌  |
 
+## Example multiple printing 5 printers
+
+- support print WIFI,BTE and USB in one time
+
+<https://youtu.be/hyEmWCuuu-g?si=ZGrFVPcgChBbS6Kx>
+
+## Installation
+
 <br />
 <div style="display: flex; flex-direction: row; align-self: center; align-items: center">
 <img src="https://i.ibb.co/GtHcCDb/Screenshot-1716456174.png" alt="screenshot" width="300" height="550"/>

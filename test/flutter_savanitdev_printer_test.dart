@@ -1,183 +1,271 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_savanitdev_printer/flutter_savanitdev_printer.dart';
 import 'package:flutter_savanitdev_printer/flutter_savanitdev_printer_platform_interface.dart';
 import 'package:flutter_savanitdev_printer/flutter_savanitdev_printer_method_channel.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class MockFlutterSavanitdevPrinterPlatform
-    with MockPlatformInterfaceMixin
-    implements FlutterSavanitdevPrinterPlatform {
+class MockFlutterSavanitdevPrinterPlatform with MockPlatformInterfaceMixin implements FlutterSavanitdevPrinterPlatform {
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
 
-
-
   @override
-  Future<String?> cancelChinese() {
-    // TODO: implement cancelChinese
+  Future<String?> connectMultiXPrinter(String address, String type) {
+    // TODO: implement connectMultiXPrinter
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> checkStatus() {
-    // TODO: implement checkStatus
+  Future<String?> cutESCX(String address) {
+    // TODO: implement cutESCX
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> connectBLE(String macAddress) {
-    // TODO: implement connectBLE
+  Future<String?> disconnectXPrinter(String address) {
+    // TODO: implement disconnectXPrinter
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> connectNet(String ip) {
-    // TODO: implement connectNet
+  Future<String?> pingDevice(String address, int timeout) {
+    // TODO: implement pingDevice
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> connectUSB(String usbAddress) {
-    // TODO: implement connectUSB
+  Future<String?> printImgCPCL(String address, String encode, int width, int x, int y) {
+    // TODO: implement printImgCPCL
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> disconnectBLE() {
-    // TODO: implement disconnectBLE
+  Future<String?> printImgESCX(String address, String encode, int countCut, int width) {
+    // TODO: implement printImgESCX
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> disconnectNet(String ip) {
-    // TODO: implement disconnectNet
+  Future<String?> printImgTSPL(
+      String address, String encode, int width, int widthBmp, int height, int m, int n, int x, int y) {
+    // TODO: implement printImgTSPL
     throw UnimplementedError();
   }
 
   @override
-  Future findAvailableDevice() {
-    // TODO: implement findAvailableDevice
+  Future<String?> printImgZPL(String address, String encode, int printCount, int width, int x, int y) {
+    // TODO: implement printImgZPL
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> getLangModel() {
-    // TODO: implement getLangModel
+  Future<String?> printRawDataCPCL(String address, String encode) {
+    // TODO: implement printRawDataCPCL
     throw UnimplementedError();
   }
 
   @override
-  Future<List?> getListDevice() {
-    // TODO: implement getListDevice
+  Future<String?> printRawDataESC(String address, String encode) {
+    // TODO: implement printRawDataESC
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> getUSB() {
-    // TODO: implement getUSB
+  Future<String?> printRawDataTSPL(String address, String encode) {
+    // TODO: implement printRawDataTSPL
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> image64BaseBLE(String base64String, int width, int isBLE) {
-    // TODO: implement image64BaseBLE
+  Future<String?> printerStatusZPL(String address, int timeout) {
+    // TODO: implement printerStatusZPL
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> initBLE() {
-    // TODO: implement initBLE
+  Future<String?> removeConnection(String address) {
+    // TODO: implement removeConnection
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> onCreate() {
-    // TODO: implement onCreate
+  Future<String?> setPrintDensity(String address, String density) {
+    // TODO: implement setPrintDensity
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> printBitmap() {
-    // TODO: implement printBitmap
+  Future<String?> setPrintOrientation(String address, String orientation) {
+    // TODO: implement setPrintOrientation
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> printImgNet(
-      String ip, String base64String, int width, bool isDisconnect) {
-    // TODO: implement printImgNet
+  Future<String?> setPrintSpeed(String address, int speed) {
+    // TODO: implement setPrintSpeed
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> printLangPrinter() {
-    // TODO: implement printLangPrinter
+  Future<List<int>> strTobytes(String text, String codePage) {
+    // TODO: implement setPrintSpeed
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> printRawData(String ip, String encode, bool isDisconnect) {
-    // TODO: implement printRawData
+  Future<String?> startQuickDiscovery(int timeout) {
+    // TODO: implement startQuickDiscovery
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> rawDataBLE(String encode) {
-    // TODO: implement rawDataBLE
+  Future<String?> getUSBAddress() {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  // ============= ZyWell Printer ==================//
+
+  @override
+  Future<String?> connectZyWell(String address, String type) {
+    // TODO: implement startQuickDiscovery
     throw UnimplementedError();
   }
 
   @override
-  Future reqBlePermission() {
-    // TODO: implement reqBlePermission
+  Future<String?> disconnectZyWell(String address) {
+    // TODO: implement startQuickDiscovery
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> setLang(String codePage) {
-    // TODO: implement setLang
+  Future<String?> getPrinterStatusZyWell(String address) {
+    // TODO: implement startQuickDiscovery
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> startScanBLE() {
-    // TODO: implement startScanBLE
+  Future<String?> printRawZyWell(String address, String encode) {
+    // TODO: implement startQuickDiscovery
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> tryGetUsbPermission() {
-    // TODO: implement tryGetUsbPermission
+  Future<String?> printImgZyWell(String address, String encode, bool isCut, int width, int cutCount) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+// ============= ESC POS command ==================//
+
+  @override
+  Future<List<int>> selectAlignment(String align) {
+    // TODO: implement startQuickDiscovery
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> printBLEinPrinter(int isCut) {
-    // TODO: implement printBLEinPrinter
+  Future<List<int>> selectCharacterSize(int n) {
+    // TODO: implement startQuickDiscovery
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> printBLEImgAndSet(String base64String, int width, int isCut) {
-    // TODO: implement printBLEImgAndSet
+  Future<List<int>> selectOrCancelBoldModel(int n) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> selectCharacterCodePage(int n) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> setBarcodeWidth(int n) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> setBarcodeHeight(int n) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> selectHRICharacterPrintPosition(int n) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> selectInternationalCharacterSets(int n) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> printBarcode(int m, int n, String content) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> setAbsolutePrintPosition(int m, int n) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> text(String text, String codePage) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> printQRcode(int n, int errLevel, String code) {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> cut() {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> initializePrinter() {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> cancelChineseCharModel() {
+    // TODO: implement startQuickDiscovery
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> printAndFeedLine() {
+    // TODO: implement startQuickDiscovery
     throw UnimplementedError();
   }
 }
 
 void main() {
-  final FlutterSavanitdevPrinterPlatform initialPlatform =
-      FlutterSavanitdevPrinterPlatform.instance;
+  final FlutterSavanitdevPrinterPlatform initialPlatform = FlutterSavanitdevPrinterPlatform.instance;
 
   test('$MethodChannelFlutterSavanitdevPrinter is the default instance', () {
-    expect(
-        initialPlatform, isInstanceOf<MethodChannelFlutterSavanitdevPrinter>());
+    expect(initialPlatform, isInstanceOf<MethodChannelFlutterSavanitdevPrinter>());
   });
 
   test('getPlatformVersion', () async {
-    FlutterSavanitdevPrinter flutterSavanitdevPrinterPlugin =
-        FlutterSavanitdevPrinter();
-    MockFlutterSavanitdevPrinterPlatform fakePlatform =
-        MockFlutterSavanitdevPrinterPlatform();
+    FlutterSavanitdevPrinter flutterSavanitdevPrinterPlugin = FlutterSavanitdevPrinter();
+    MockFlutterSavanitdevPrinterPlatform fakePlatform = MockFlutterSavanitdevPrinterPlatform();
     FlutterSavanitdevPrinterPlatform.instance = fakePlatform;
 
     expect(await flutterSavanitdevPrinterPlugin.getPlatformVersion(), '42');
