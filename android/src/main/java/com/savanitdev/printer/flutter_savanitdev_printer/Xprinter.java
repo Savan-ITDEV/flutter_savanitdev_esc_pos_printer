@@ -154,7 +154,12 @@ public class Xprinter {
             printer.printerStatus(status -> {
                 // Handle the received status here
                 String msg;
-
+                try {
+                    Thread.sleep(500);
+                    checkInitConnection(address);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
                 rety = 0;
                 switch (status) {
                     case 0:
@@ -184,13 +189,6 @@ public class Xprinter {
                             if (type == POSConnect.DEVICE_TYPE_ETHERNET || type == POSConnect.DEVICE_TYPE_BLUETOOTH) {
                                 result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                             } else {
-                                try {
-                                    Thread.sleep(1000);
-                                    checkInitConnection(address);
-                                } catch (InterruptedException e) {
-                                    throw new RuntimeException(e);
-                                }
-
                                 result.success(msg);
                             }
                         } else {
