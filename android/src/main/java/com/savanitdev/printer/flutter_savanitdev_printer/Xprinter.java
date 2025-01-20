@@ -44,9 +44,7 @@ public class Xprinter {
         POSConnect.init(context);
         Log.e("Xprinter", "Start init");
     }
-
     public void connectMultiXPrinter(String address, String portType, @NonNull MethodChannel.Result result) {
-
         try {
             int type = POSConnect.DEVICE_TYPE_ETHERNET;
             if (Objects.equals(portType, "usb")) {
@@ -209,12 +207,12 @@ public class Xprinter {
                 POSPrinter printer = new POSPrinter(connection);
                 Bitmap bmp = decodeBase64ToBitmap(base64String);
                 final Bitmap bitmapToPrint = convertGreyImg(bmp);
-                List<Bitmap> blist = new ArrayList<>();
-                blist = BitmapProcess.cutBitmap(countCut, bitmapToPrint);
-                for (int i = 0; i < blist.size(); i++) {
-                    printer.printBitmap(blist.get(i), POSConst.ALIGNMENT_CENTER, width);
-                }
-                printer.cutHalfAndFeed(0);
+//                List<Bitmap> blist = new ArrayList<>();
+//                blist = BitmapProcess.cutBitmap(countCut, bitmapToPrint);
+//                for (int i = 0; i < blist.size(); i++) {
+//                    printer.printBitmap(blist.get(i), POSConst.ALIGNMENT_CENTER, width);
+//                }
+                printer.printBitmap(bitmapToPrint,POSConst.ALIGNMENT_CENTER,width).cutHalfAndFeed(0);
                 statusXprinter(address, printer, connection, result);
             } else {
                 result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
@@ -234,6 +232,8 @@ public class Xprinter {
                 final Bitmap bitmapToPrint = convertGreyImg(bmp);
                 byte[] processedImageData =  baBmpToSendData(0,bitmapToPrint, BitmapToByteData.BmpType.Dithering);
                 System.out.println("Processed Image Size: " + processedImageData.length + " bytes");
+
+
                 // Send the image in chunks (example: 4 KB chunks)
                 int chunkSize = 4096;
                 int totalChunks = (int) Math.ceil((double) processedImageData.length / chunkSize);
@@ -478,7 +478,6 @@ public class Xprinter {
 
         return newdata;
     }
-
     private static byte[] bagetbmpdata(int[] b, int w, int m) {
         int nH = w / 256;
         int nL = w % 256;
@@ -516,7 +515,6 @@ public class Xprinter {
         // Prepend the MIME type
         return "data:image/png;base64," + base64String;
     }
-
     public void printImgZPL(String address, String base64String, Integer width, Integer printCount, Integer x, Integer y, @NonNull MethodChannel.Result result) {
         try {
             IDeviceConnection connection = connections.get(address);
@@ -542,7 +540,6 @@ public class Xprinter {
             result.error(StatusPrinter.ERROR, e.toString(), "");
         }
     }
-
     public void printImgCPCL(String address, String base64String, Integer width, Integer x, Integer y, @NonNull MethodChannel.Result result) {
         try {
             IDeviceConnection connection = connections.get(address);
@@ -563,7 +560,6 @@ public class Xprinter {
             result.error(StatusPrinter.ERROR, e.toString(), "");
         }
     }
-
     public void printImgTSPL(String address, String base64String, Integer width, Integer widthBmp, Integer height, Integer m, Integer n, Integer x, Integer y,
                              @NonNull MethodChannel.Result result) {
         try {
@@ -590,7 +586,6 @@ public class Xprinter {
             result.error(StatusPrinter.ERROR, e.toString(), "");
         }
     }
-
     public void statusZPL(ZPLPrinter printer, IDeviceConnection connection, @NonNull MethodChannel.Result result) {
         try {
             int type = connection.getConnectType();
