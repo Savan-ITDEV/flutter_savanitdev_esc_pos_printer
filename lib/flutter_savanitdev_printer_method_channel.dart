@@ -37,20 +37,21 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
   }
 
   @override
-  Future<String?> printRawDataESC(String address, String encode) async {
+  Future<String?> printRawDataESC(String address, String encode, bool isDevicePOS) async {
     final version = await methodChannel.invokeMethod<String>('printRawDataESC', <String, dynamic>{
       'address': address,
       'encode': encode,
+      'isDevicePOS': isDevicePOS,
     });
     return version;
   }
 
   @override
-  Future<String?> printImgESCX(String address, String encode, int countCut, int width) async {
+  Future<String?> printImgESCX(String address, String encode, int countCut, int width, bool isDevicePOS) async {
     final version = await methodChannel.invokeMethod<String>('printImgESCX', <String, dynamic>{
       'address': address,
       'encode': encode,
-      'countCut': countCut ?? 50,
+      'isDevicePOS': isDevicePOS,
       'width': width,
     });
     return version;

@@ -41,8 +41,14 @@ class MockFlutterSavanitdevPrinterPlatform with MockPlatformInterfaceMixin imple
   }
 
   @override
-  Future<String?> printImgESCX(String address, String encode, int countCut, int width) {
+  Future<String?> printImgESCX(String address, String encode, int countCut, int width, bool isDevicePOS) {
     // TODO: implement printImgESCX
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<String?> printRawDataESC(String address, String encode, bool isDevicePOS) {
+    // TODO: implement printRawDataESC
     throw UnimplementedError();
   }
 
@@ -62,12 +68,6 @@ class MockFlutterSavanitdevPrinterPlatform with MockPlatformInterfaceMixin imple
   @override
   Future<String?> printRawDataCPCL(String address, String encode) {
     // TODO: implement printRawDataCPCL
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<String?> printRawDataESC(String address, String encode) {
-    // TODO: implement printRawDataESC
     throw UnimplementedError();
   }
 

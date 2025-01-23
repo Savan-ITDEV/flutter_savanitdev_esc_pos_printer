@@ -59,14 +59,15 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
             case "printRawDataESC" -> {
                 String address = call.argument("address");
                 String encode = call.argument("encode");
-                xprinter.printRawDataESC(address, encode, result);
+                boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
+                xprinter.printRawDataESC(address, encode,isDevicePOS, result);
             }
             case "printImgESCX" -> {
                 String address = call.argument("address");
                 String encode = call.argument("encode");
                 Integer width = call.argument("width");
-                Integer countCut = call.argument("countCut");
-                xprinter.printImgESCX(address, encode, countCut, width, result);
+                boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
+                xprinter.printImgESCX(address, encode, isDevicePOS, width, result);
             }
             case "cutESCX" -> {
                 String address = call.argument("address");

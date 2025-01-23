@@ -1,4 +1,5 @@
 package com.savanitdev.printer.flutter_savanitdev_printer;
+import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -6,13 +7,23 @@ import android.graphics.Canvas;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import com.savanitdev.printer.flutter_savanitdev_printer.utils.StatusPrinter;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -39,9 +50,10 @@ public class Xprinter {
     private final Map<String, IDeviceConnection> connections = new HashMap<>();
     int rety = 0;
     int maxRety = 3;
-
+    Context contextX;
     public void initPrinter(Context context) {
         POSConnect.init(context);
+        contextX = context;
         Log.e("Xprinter", "Start init");
     }
     public void connectMultiXPrinter(String address, String portType, @NonNull MethodChannel.Result result) {
@@ -116,7 +128,6 @@ public class Xprinter {
     }
 
     private void connectListener(String address, int code,String portType, @NonNull MethodChannel.Result result) {
-
         try {
             if (code == POSConnect.CONNECT_SUCCESS) {
                 rety = 0;
@@ -145,13 +156,15 @@ public class Xprinter {
         return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
     }
 
-    public void statusXprinter(String address, POSPrinter printer, IDeviceConnection connection, @NonNull MethodChannel.Result result) {
+    public void statusXprinter(boolean isDevicePOS,String address, POSPrinter printer, IDeviceConnection connection, @NonNull MethodChannel.Result result) {
         int type = connection.getConnectType();
         try
         {
             printer.printerStatus(status -> {
+//                Log.e("TAG", "================================== > statusXprinter :" + status);
+                // writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
                 // Handle the received status here
-                String msg;
+                String msg = "";
                 try {
                     Thread.sleep(500);
                     checkInitConnection(address);
@@ -166,7 +179,7 @@ public class Xprinter {
                         break;
                     case 8:
                         msg = "STS_COVEROPEN";
-                        result.success(msg);
+                        result.error(StatusPrinter.ERROR, msg, StatusPrinter.STS_COVEROPEN);
                         break;
                     case 16:
                         msg = "STS_PAPEREMPTY";
@@ -174,7 +187,7 @@ public class Xprinter {
                         break;
                     case 32:
                         msg = "STS_PRESS_FEED";
-                        result.success(msg);
+                        result.error(StatusPrinter.ERROR,msg,StatusPrinter.STS_PRESS_FEED);
                         break;
                     case 64:
                         result.error(StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, StatusPrinter.STS_PRINTER_ERR);
@@ -184,7 +197,7 @@ public class Xprinter {
                         if (status > 0) {
                             result.success(msg);
                         } else if (status == -4) {
-                            if (type == POSConnect.DEVICE_TYPE_ETHERNET || type == POSConnect.DEVICE_TYPE_BLUETOOTH) {
+                            if (type == POSConnect.DEVICE_TYPE_ETHERNET || type == POSConnect.DEVICE_TYPE_BLUETOOTH || type == POSConnect.DEVICE_TYPE_USB && isDevicePOS) {
                                 result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                             } else {
                                 result.success(msg);
@@ -196,11 +209,12 @@ public class Xprinter {
                 }
             });
         } catch (Exception e){
+            // writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString());
         }
     }
 
-    public void printImgESCX(String address, String base64String, Integer countCut, Integer width, @NonNull MethodChannel.Result result) {
+    public void printImgESCX(String address, String base64String, boolean isDevicePOS, Integer width, @NonNull MethodChannel.Result result) {
         try {
             IDeviceConnection connection = connections.get(address);
             if (connection.isConnect()) {
@@ -212,8 +226,8 @@ public class Xprinter {
 //                for (int i = 0; i < blist.size(); i++) {
 //                    printer.printBitmap(blist.get(i), POSConst.ALIGNMENT_CENTER, width);
 //                }
-                printer.printBitmap(bitmapToPrint,POSConst.ALIGNMENT_CENTER,width).cutHalfAndFeed(0);
-                statusXprinter(address, printer, connection, result);
+                printer.initializePrinter().printBitmap(bitmapToPrint,POSConst.ALIGNMENT_CENTER,width).cutHalfAndFeed(0);
+                statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
                 result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
             }
@@ -222,7 +236,7 @@ public class Xprinter {
         }
     }
 
-    public void printImgFast(String address, String base64String, Integer countCut, Integer width, @NonNull MethodChannel.Result result) {
+    public void printImgFast(String address, String base64String, boolean isDevicePOS, Integer width, @NonNull MethodChannel.Result result) {
         try {
             IDeviceConnection connection = connections.get(address);
             if (connection.isConnect()) {
@@ -240,12 +254,12 @@ public class Xprinter {
                 for (int i = 0; i < totalChunks; i++) {
                     int start = i * chunkSize;
                     int end = Math.min(start + chunkSize, processedImageData.length);
-                    byte[] chunk = java.util.Arrays.copyOfRange(processedImageData, start, end);
+                    byte[] chunk = Arrays.copyOfRange(processedImageData, start, end);
                     printer.sendData(chunk);
                     System.out.println("Sent chunk " + (i + 1) + " of size: " + chunk.length + " bytes");
                 }
                 printer.cutHalfAndFeed(0);
-                statusXprinter(address, printer, connection, result);
+                statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
                 result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
             }
@@ -253,15 +267,15 @@ public class Xprinter {
             result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,e.toString());
         }
     }
-    public void printRawDataESC(String address, String encode, @NonNull MethodChannel.Result result) {
+    public void printRawDataESC(String address, String encode,boolean isDevicePOS, @NonNull MethodChannel.Result result) {
         try {
             IDeviceConnection connection = connections.get(address);
             if (connection != null && connection.isConnect()) {
                 POSPrinter printer = new POSPrinter(connection);
                 byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
                 System.out.println("Sent of size: " + bytes.length + " bytes");
-                printer.sendData(bytes);
-                statusXprinter(address, printer, connection, result);
+                printer.initializePrinter().sendData(bytes);
+                statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
                 result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
             }
@@ -394,8 +408,8 @@ public class Xprinter {
                 0.299f, 0.587f, 0.114f, 0, 0,
                 0, 0, 0, 1, 0
         };
-        android.graphics.ColorMatrix colorMatrix = new android.graphics.ColorMatrix(grayscaleMatrix);
-        android.graphics.ColorMatrixColorFilter filter = new android.graphics.ColorMatrixColorFilter(colorMatrix);
+        ColorMatrix colorMatrix = new ColorMatrix(grayscaleMatrix);
+        ColorMatrixColorFilter filter = new ColorMatrixColorFilter(colorMatrix);
         paint.setColorFilter(filter);
         canvas.drawBitmap(bitmap, 0, 0, paint);
         return monochromeBitmap;
@@ -746,6 +760,47 @@ public class Xprinter {
             }
         } catch (Exception e) {
             result.error(StatusPrinter.ERROR, e.toString(), "");
+        }
+    }
+
+    public static void writeTextFile(Context context, String fileName, String content) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // For Android 10 and above
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+                values.put(MediaStore.Downloads.MIME_TYPE, "text/plain");
+                values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+
+                // Insert and get the Uri for the new file
+                Uri uri = context.getContentResolver()
+                        .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+
+                if (uri != null) {
+                    OutputStream outputStream = context.getContentResolver().openOutputStream(uri);
+                    if (outputStream != null) {
+                        outputStream.write(content.getBytes());
+                        outputStream.close();
+//                        Toast.makeText(context, "File written to Downloads", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    throw new FileNotFoundException("Unable to create file in Downloads.");
+                }
+            } else {
+                // For Android 9 and below
+                File downloadsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                if (!downloadsFolder.exists()) {
+                    downloadsFolder.mkdirs();
+                }
+                File file = new File(downloadsFolder, fileName);
+                FileOutputStream outputStream = new FileOutputStream(file);
+                outputStream.write(content.getBytes());
+                outputStream.close();
+//                Toast.makeText(context, "File written to Downloads", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+//            Toast.makeText(context, "Failed to write file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 }

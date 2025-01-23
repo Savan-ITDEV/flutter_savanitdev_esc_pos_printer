@@ -19,12 +19,12 @@ class FlutterSavanitdevPrinter {
     return FlutterSavanitdevPrinterPlatform.instance.removeConnection(address);
   }
 
-  Future<String?> printRawDataESC(String address, String encode) {
-    return FlutterSavanitdevPrinterPlatform.instance.printRawDataESC(address, encode);
+  Future<String?> printRawDataESC(String address, String encode, bool isDevicePOS) {
+    return FlutterSavanitdevPrinterPlatform.instance.printRawDataESC(address, encode, isDevicePOS);
   }
 
-  Future<String?> printImgESCX(String address, String encode, int countCut, int width) {
-    return FlutterSavanitdevPrinterPlatform.instance.printImgESCX(address, encode, countCut, width);
+  Future<String?> printImgESCX(String address, String encode, int countCut, int width, bool isDevicePOS) {
+    return FlutterSavanitdevPrinterPlatform.instance.printImgESCX(address, encode, countCut, width, isDevicePOS);
   }
 
   Future<String?> cutESCX(String address) {

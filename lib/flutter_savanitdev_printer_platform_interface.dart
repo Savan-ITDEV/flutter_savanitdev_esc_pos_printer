@@ -35,9 +35,9 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
 
   Future<String?> removeConnection(String address);
 
-  Future<String?> printRawDataESC(String address, String encode);
+  Future<String?> printRawDataESC(String address, String encode, bool isDevicePOS);
 
-  Future<String?> printImgESCX(String address, String encode, int countCut, int width);
+  Future<String?> printImgESCX(String address, String encode, int countCut, int width, bool isDevicePOS);
 
   Future<String?> cutESCX(String address);
 
