@@ -14,10 +14,9 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
+import com.savanitdev.printer.flutter_savanitdev_printer.utils.LogPrinter;
 import com.savanitdev.printer.flutter_savanitdev_printer.utils.StatusPrinter;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -37,6 +36,8 @@ import net.posprinter.TSPLConst;
 import net.posprinter.TSPLPrinter;
 import net.posprinter.ZPLPrinter;
 import net.posprinter.model.AlgorithmType;
+import net.posprinter.posprinterface.IDataCallback;
+
 import zywell.posprinter.utils.BitmapProcess;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,7 +77,6 @@ public class Xprinter {
             result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, e.toString());
         }
     }
-
     public void disconnectXPrinter(String address, @NonNull MethodChannel.Result result) {
 
         try {
@@ -91,9 +91,7 @@ public class Xprinter {
             result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT_FAIL,e.toString());
         }
     }
-
     public void removeConnection(String address,@NonNull MethodChannel.Result result) {
-
         try
         {
             // Check if the connection exists for the given IP
@@ -126,7 +124,6 @@ public class Xprinter {
 //               Log.d("TAG", "Connection removed for IP: " + address);
         }
     }
-
     private void connectListener(String address, int code,String portType, @NonNull MethodChannel.Result result) {
         try {
             if (code == POSConnect.CONNECT_SUCCESS) {
@@ -155,14 +152,13 @@ public class Xprinter {
         byte[] decodedBytes = Base64.decode(base64String, Base64.DEFAULT);
         return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
     }
-
     public void statusXprinter(boolean isDevicePOS,String address, POSPrinter printer, IDeviceConnection connection, @NonNull MethodChannel.Result result) {
         int type = connection.getConnectType();
         try
         {
             printer.printerStatus(status -> {
 //                Log.e("TAG", "================================== > statusXprinter :" + status);
-                // writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
+                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
                 // Handle the received status here
                 String msg = "";
                 try {
@@ -197,7 +193,7 @@ public class Xprinter {
                         if (status > 0) {
                             result.success(msg);
                         } else if (status == -4) {
-                            if (type == POSConnect.DEVICE_TYPE_ETHERNET || type == POSConnect.DEVICE_TYPE_BLUETOOTH || type == POSConnect.DEVICE_TYPE_USB && isDevicePOS) {
+                            if (isDevicePOS) {
                                 result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                             } else {
                                 result.success(msg);
@@ -209,11 +205,33 @@ public class Xprinter {
                 }
             });
         } catch (Exception e){
-            // writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
+            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString());
         }
     }
-
+    public void statusPrint(POSPrinter printer, @NonNull MethodChannel.Result result){
+        printer.printerCheck(POSConst.STS_TYPE_PRINT, 5000, new IDataCallback() {
+            @Override
+            public void receive(byte[] data) {
+                if (data == null || data.length == 0) {
+                    Log.e("PrinterCheck", "No response from printer");
+                    LogPrinter.writeTextFile(contextX,"statusXprinter.txt", "No response from printer");
+                    result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,"No response from printer");
+                    return;
+                }
+                // Example: Bit 5 (0x20) in the first byte indicates "printing busy"
+                boolean isPrinting = (data[0] & 0x20) != 0; // Replace 0x20 with your printer's flag
+                if (isPrinting) {
+                    LogPrinter.writeTextFile(contextX,"statusXprinter.txt", "Printer is still busy...");
+                    result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,"Printer is still busy...");
+                    Log.d("PrinterCheck", "Printer is still busy...");
+                } else {
+                    Log.d("PrinterCheck", "Print job likely completed successfully!");
+                    result.success(StatusPrinter.STS_NORMAL);
+                }
+            }
+        });
+    }
     public void printImgESCX(String address, String base64String, boolean isDevicePOS, Integer width, @NonNull MethodChannel.Result result) {
         try {
             IDeviceConnection connection = connections.get(address);
@@ -235,7 +253,6 @@ public class Xprinter {
             result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,e.toString());
         }
     }
-
     public void printImgFast(String address, String base64String, boolean isDevicePOS, Integer width, @NonNull MethodChannel.Result result) {
         try {
             IDeviceConnection connection = connections.get(address);
@@ -393,46 +410,6 @@ public class Xprinter {
         mBitmap.setPixels(pixels, 0, width, 0, 0, width, height);
         return mBitmap;
     }
-    // Convert Bitmap to Monochrome
-    private static Bitmap convertToMonochrome(Bitmap bitmap) {
-        int width = bitmap.getWidth() / 3;
-        int height = bitmap.getHeight() / 3;
-
-        Bitmap monochromeBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(monochromeBitmap);
-        Paint paint = new Paint();
-        // Apply grayscale filter
-        float[] grayscaleMatrix = {
-                0.299f, 0.587f, 0.114f, 0, 0,
-                0.299f, 0.587f, 0.114f, 0, 0,
-                0.299f, 0.587f, 0.114f, 0, 0,
-                0, 0, 0, 1, 0
-        };
-        ColorMatrix colorMatrix = new ColorMatrix(grayscaleMatrix);
-        ColorMatrixColorFilter filter = new ColorMatrixColorFilter(colorMatrix);
-        paint.setColorFilter(filter);
-        canvas.drawBitmap(bitmap, 0, 0, paint);
-        return monochromeBitmap;
-    }
-    // Convert Bitmap to Byte Array
-    private static byte[] bitmapToByteArray(Bitmap bitmap) {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream); // Adjust format as needed
-        return outputStream.toByteArray();
-    }
-    private static Bitmap toGrayscale(Bitmap bmpOriginal) {
-        int height = bmpOriginal.getHeight();
-        int width = bmpOriginal.getWidth();
-        Bitmap bmpGrayscale = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
-        Canvas c = new Canvas(bmpGrayscale);
-        Paint paint = new Paint();
-        ColorMatrix cm = new ColorMatrix();
-        cm.setSaturation(0.0F);
-        ColorMatrixColorFilter f = new ColorMatrixColorFilter(cm);
-        paint.setColorFilter(f);
-        c.drawBitmap(bmpOriginal, 0.0F, 0.0F, paint);
-        return bmpGrayscale;
-    }
     public static byte[] baBmpToSendData(int m, Bitmap mBitmap, BitmapToByteData.BmpType bmpType) {
         // Convert the image to grayscale
         Bitmap bitmap = convertGreyImg(mBitmap);
@@ -522,12 +499,6 @@ public class Xprinter {
         System.arraycopy(byte_1, 0, byte_3, 0, byte_1.length);
         System.arraycopy(byte_2, 0, byte_3, byte_1.length, byte_2.length);
         return byte_3;
-    }
-    public static String convertByteToBase64Image(byte[] byteArray) {
-        // Encode the byte array to a Base64 string
-        String base64String = Base64.encodeToString(byteArray, Base64.DEFAULT);
-        // Prepend the MIME type
-        return "data:image/png;base64," + base64String;
     }
     public void printImgZPL(String address, String base64String, Integer width, Integer printCount, Integer x, Integer y, @NonNull MethodChannel.Result result) {
         try {
@@ -760,47 +731,6 @@ public class Xprinter {
             }
         } catch (Exception e) {
             result.error(StatusPrinter.ERROR, e.toString(), "");
-        }
-    }
-
-    public static void writeTextFile(Context context, String fileName, String content) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // For Android 10 and above
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
-                values.put(MediaStore.Downloads.MIME_TYPE, "text/plain");
-                values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
-
-                // Insert and get the Uri for the new file
-                Uri uri = context.getContentResolver()
-                        .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-
-                if (uri != null) {
-                    OutputStream outputStream = context.getContentResolver().openOutputStream(uri);
-                    if (outputStream != null) {
-                        outputStream.write(content.getBytes());
-                        outputStream.close();
-//                        Toast.makeText(context, "File written to Downloads", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
-                    throw new FileNotFoundException("Unable to create file in Downloads.");
-                }
-            } else {
-                // For Android 9 and below
-                File downloadsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                if (!downloadsFolder.exists()) {
-                    downloadsFolder.mkdirs();
-                }
-                File file = new File(downloadsFolder, fileName);
-                FileOutputStream outputStream = new FileOutputStream(file);
-                outputStream.write(content.getBytes());
-                outputStream.close();
-//                Toast.makeText(context, "File written to Downloads", Toast.LENGTH_SHORT).show();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-//            Toast.makeText(context, "Failed to write file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.savanitdev.printer.flutter_savanitdev_printer;
 
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -81,7 +82,8 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
             case "startQuickDiscovery" -> {
                 Integer timeout = call.argument("timeout");
                 startQuickDiscovery(timeout, result);
-
+            }  case "USBDiscovery" -> {
+                USBDiscovery(result);
             }
             case "printImgZPL" -> {
                 String address = call.argument("address");
@@ -143,7 +145,9 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 xprinter.printerStatusZPL(address, timeout, result);
             }
             case "getUSBAddress" -> {
-                getUSBAddress(result);
+                Integer productId = call.argument("productId");
+                Integer vendorId = call.argument("vendorId");
+                getUSBAddress(productId,vendorId,result);
             }
 
             case "tryGetUsbPermission" ->{
@@ -182,16 +186,41 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
             default -> result.notImplemented();
         }
     }
-
-    public void getUSBAddress(@NonNull Result result) {
+    public void USBDiscovery( @NonNull Result result) {
         try {
-            var usbNames = POSConnect.getUsbDevices(context);
-            var address = "";
-            if (!usbNames.isEmpty()) {
-                address = usbNames.get(0);
-                Log.d("usb path ", address);
+            // List to hold discovered printers
+            List<Map<String, String>> printersArray = new ArrayList<>();
+            var usbLists = POSConnect.getUsbDevice(context);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                usbLists.forEach((usb)->{
+                    // Create a map to store printer information
+                    Map<String, String> printerInfo = new HashMap<>();
+                    printerInfo.put("address", usb.getDeviceName());
+                    printerInfo.put("product", usb.getProductName());
+                    printerInfo.put("vendorId", String.valueOf(usb.getVendorId()));
+                    printerInfo.put("productId", String.valueOf(usb.getProductId()));
+                    printerInfo.put("manufacturerName", String.valueOf(usb.getManufacturerName()));
+                    // Add the printer info to the list
+                    printersArray.add(printerInfo);
+                });
+                result.success(printersArray);
             }
-            result.success(address);
+        } catch (Exception exe) {
+            Log.d("TAG", "Exception--: " + exe);
+            result.error("ERROR", exe.toString(), "");
+        }
+    }
+
+    public void getUSBAddress(Integer productId ,Integer vendorId, @NonNull Result result) {
+        try {
+            var usbLists = POSConnect.getUsbDevice(context);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                usbLists.forEach((usb)->{
+                    if(usb.getVendorId() == vendorId && usb.getProductId() == productId){
+                        result.success(usb.getDeviceName());
+                    }
+                });
+            }
         } catch (Exception exe) {
             Log.d("TAG", "Exception--: " + exe);
             result.error("ERROR", exe.toString(), "");
