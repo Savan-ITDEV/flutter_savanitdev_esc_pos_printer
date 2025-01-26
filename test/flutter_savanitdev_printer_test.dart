@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_savanitdev_printer/flutter_savanitdev_printer.dart';
 import 'package:flutter_savanitdev_printer/flutter_savanitdev_printer_platform_interface.dart';

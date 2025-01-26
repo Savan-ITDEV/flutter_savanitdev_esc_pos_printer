@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'dart:typed_data';
 import 'flutter_savanitdev_printer_platform_interface.dart';
 
 class FlutterSavanitdevPrinter {

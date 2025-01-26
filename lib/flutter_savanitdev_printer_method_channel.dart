@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -402,12 +400,3 @@ class MethodChannelFlutterSavanitdevPrinter
 
   // ============= ESC POS command ==================//
 }
-
-
-// Class PrinterInfo {
-//   String? address;
-//   String? product;
-//   String? vendorId;
-//   String? productId;
-//   String? manufacturerName;
-// }

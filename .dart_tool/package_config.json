@@ -44,6 +44,12 @@
       "languageVersion": "3.3"
     },
     {
+      "name": "flutter_charset_savanitdev",
+      "rootUri": "file:///Users/larsavanitdev/.pub-cache/hosted/pub.dev/flutter_charset_savanitdev-1.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "flutter_lints",
       "rootUri": "file:///Users/larsavanitdev/.pub-cache/hosted/pub.dev/flutter_lints-2.0.3",
       "packageUri": "lib/",
@@ -170,7 +176,7 @@
       "languageVersion": "3.2"
     }
   ],
-  "generated": "2025-01-16T08:56:19.341444Z",
+  "generated": "2025-01-24T16:08:59.518403Z",
   "generator": "pub",
   "generatorVersion": "3.5.3",
   "flutterRoot": "file:///Users/larsavanitdev/Desktop/FileDev/flutter",

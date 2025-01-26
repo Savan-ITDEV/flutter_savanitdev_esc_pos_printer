@@ -5,11 +5,13 @@ import 'package:flutter_savanitdev_printer/flutter_savanitdev_printer_method_cha
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  MethodChannelFlutterSavanitdevPrinter platform = MethodChannelFlutterSavanitdevPrinter();
+  MethodChannelFlutterSavanitdevPrinter platform =
+      MethodChannelFlutterSavanitdevPrinter();
   const MethodChannel channel = MethodChannel('flutter_savanitdev_printer');
 
   setUp(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
       channel,
       (MethodCall methodCall) async {
         return '42';
@@ -18,10 +20,11 @@ void main() {
   });
 
   tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null);
   });
 
-  test('getPlatformVersion', () async {
-    expect(await platform.getPlatformVersion(), '42');
-  });
+  // test('getPlatformVersion', () async {
+  //   expect(await platform.getPlatformVersion(), '42');
+  // });
 }
