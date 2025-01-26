@@ -3,11 +3,10 @@ package com.savanitdev.printer.flutter_savanitdev_printer;
 import android.content.Context;
 import android.os.Build;
 import android.util.Log;
-
 import androidx.annotation.NonNull;
-
+import com.savanitdev.printer.flutter_savanitdev_printer.utils.LogPrinter;
+import com.savanitdev.printer.flutter_savanitdev_printer.utils.StatusPrinter;
 import net.posprinter.POSConnect;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -163,7 +162,7 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
             }
             case "disconnectZyWell" -> {
                 String address = call.argument("address");
-                zywell.disconnectZyWell(address, result);
+                zywell.disconnectZyWell(result);
             }
             case "getPrinterStatusZyWell" -> {
                 String address = call.argument("address");
@@ -182,7 +181,6 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 int cutCount = call.argument("cutCount");
                 zywell.printImgZyWell(address,encode,isCut,width,cutCount,result);
             }
-
             default -> result.notImplemented();
         }
     }
@@ -205,9 +203,9 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 });
                 result.success(printersArray);
             }
-        } catch (Exception exe) {
-            Log.d("TAG", "Exception--: " + exe);
-            result.error("ERROR", exe.toString(), "");
+        } catch (Exception e) {
+            LogPrinter.writeTextFile(context, "statusXprinter.txt", String.valueOf(e));
+            result.error("ERROR", e.toString(), "");
         }
     }
 
@@ -221,9 +219,9 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                     }
                 });
             }
-        } catch (Exception exe) {
-            Log.d("TAG", "Exception--: " + exe);
-            result.error("ERROR", exe.toString(), "");
+        } catch (Exception e) {
+            LogPrinter.writeTextFile(context, "statusXprinter.txt", String.valueOf(e));
+            result.error("ERROR", e.toString(), "");
         }
     }
 

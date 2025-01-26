@@ -74,11 +74,11 @@ public class Xprinter {
             // Attempt to connect the device and use a callback listener
             connection.connect(address, (code, msg) -> connectListener(address, code,portType, result));
         } catch (Exception e) {
+            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, e.toString());
         }
     }
     public void disconnectXPrinter(String address, @NonNull MethodChannel.Result result) {
-
         try {
             IDeviceConnection connection = connections.get(address);
             if (connection != null) {
@@ -141,10 +141,12 @@ public class Xprinter {
                         result.error(StatusPrinter.ERROR, StatusPrinter.RETRY_FAILED,  StatusPrinter.RETRY_FAILED3);
                     }
                 }else{
+                    LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf("connectListener" + StatusPrinter.PRINTER_DISCONNECT));
                     result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                 }
             }
         } catch (Exception e) {
+            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR,StatusPrinter.CONNECT_ERROR, e.toString());
         }
     }
@@ -194,11 +196,13 @@ public class Xprinter {
                             result.success(msg);
                         } else if (status == -4) {
                             if (isDevicePOS) {
+                                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
                                 result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                             } else {
                                 result.success(msg);
                             }
                         } else {
+                            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINTER_DISCONNECT));
                             result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                         }
                         break;
@@ -247,9 +251,11 @@ public class Xprinter {
                 printer.initializePrinter().printBitmap(bitmapToPrint,POSConst.ALIGNMENT_CENTER,width).cutHalfAndFeed(0);
                 statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
-                result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
+                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
+                result.error(StatusPrinter.ERROR,  StatusPrinter.PRINT_FAIL, StatusPrinter.PRINT_FAIL);
             }
         } catch (Exception e) {
+            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,e.toString());
         }
     }
@@ -294,9 +300,11 @@ public class Xprinter {
                 printer.initializePrinter().sendData(bytes);
                 statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
+                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
                 result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
             }
         } catch (Exception e) {
+            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,e.toString());
         }
     }
@@ -317,11 +325,8 @@ public class Xprinter {
     public static Bitmap convertGreyImg(Bitmap img) {
         int width = img.getWidth();
         int height = img.getHeight();
-
         int[] pixels = new int[width * height];
-
         img.getPixels(pixels, 0, width, 0, 0, width, height);
-
         // The arithmetic average of a grayscale image; a threshold
         double redSum = 0, greenSum = 0, blueSun = 0;
         double total = width * height;
