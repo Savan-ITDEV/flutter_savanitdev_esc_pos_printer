@@ -204,7 +204,7 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 result.success(printersArray);
             }
         } catch (Exception e) {
-            LogPrinter.writeTextFile(context, "statusXprinter.txt", String.valueOf(e));
+//            LogPrinter.writeTextFile(context, "statusXprinter.txt", String.valueOf(e));
             result.error("ERROR", e.toString(), "");
         }
     }
@@ -220,7 +220,7 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 });
             }
         } catch (Exception e) {
-            LogPrinter.writeTextFile(context, "statusXprinter.txt", String.valueOf(e));
+//            LogPrinter.writeTextFile(context, "statusXprinter.txt", String.valueOf(e));
             result.error("ERROR", e.toString(), "");
         }
     }

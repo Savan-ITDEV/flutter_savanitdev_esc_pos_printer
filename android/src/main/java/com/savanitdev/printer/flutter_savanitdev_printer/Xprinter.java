@@ -74,7 +74,7 @@ public class Xprinter {
             // Attempt to connect the device and use a callback listener
             connection.connect(address, (code, msg) -> connectListener(address, code,portType, result));
         } catch (Exception e) {
-            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
+//            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, e.toString());
         }
     }
@@ -141,12 +141,12 @@ public class Xprinter {
                         result.error(StatusPrinter.ERROR, StatusPrinter.RETRY_FAILED,  StatusPrinter.RETRY_FAILED3);
                     }
                 }else{
-                    LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf("connectListener" + StatusPrinter.PRINTER_DISCONNECT));
+//                    LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf("connectListener" + StatusPrinter.PRINTER_DISCONNECT));
                     result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                 }
             }
         } catch (Exception e) {
-            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
+//            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR,StatusPrinter.CONNECT_ERROR, e.toString());
         }
     }
@@ -160,7 +160,7 @@ public class Xprinter {
         {
             printer.printerStatus(status -> {
 //                Log.e("TAG", "================================== > statusXprinter :" + status);
-                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
+//                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
                 // Handle the received status here
                 String msg = "";
                 try {
@@ -196,20 +196,20 @@ public class Xprinter {
                             result.success(msg);
                         } else if (status == -4) {
                             if (isDevicePOS) {
-                                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
+//                                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
                                 result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                             } else {
                                 result.success(msg);
                             }
                         } else {
-                            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINTER_DISCONNECT));
+//                            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINTER_DISCONNECT));
                             result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                         }
                         break;
                 }
             });
         } catch (Exception e){
-            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
+//            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString());
         }
     }
@@ -219,14 +219,14 @@ public class Xprinter {
             public void receive(byte[] data) {
                 if (data == null || data.length == 0) {
                     Log.e("PrinterCheck", "No response from printer");
-                    LogPrinter.writeTextFile(contextX,"statusXprinter.txt", "No response from printer");
+//                    LogPrinter.writeTextFile(contextX,"statusXprinter.txt", "No response from printer");
                     result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,"No response from printer");
                     return;
                 }
                 // Example: Bit 5 (0x20) in the first byte indicates "printing busy"
                 boolean isPrinting = (data[0] & 0x20) != 0; // Replace 0x20 with your printer's flag
                 if (isPrinting) {
-                    LogPrinter.writeTextFile(contextX,"statusXprinter.txt", "Printer is still busy...");
+//                    LogPrinter.writeTextFile(contextX,"statusXprinter.txt", "Printer is still busy...");
                     result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,"Printer is still busy...");
                     Log.d("PrinterCheck", "Printer is still busy...");
                 } else {
@@ -251,11 +251,11 @@ public class Xprinter {
                 printer.initializePrinter().printBitmap(bitmapToPrint,POSConst.ALIGNMENT_CENTER,width).cutHalfAndFeed(0);
                 statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
-                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
+//                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
                 result.error(StatusPrinter.ERROR,  StatusPrinter.PRINT_FAIL, StatusPrinter.PRINT_FAIL);
             }
         } catch (Exception e) {
-            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
+//            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,e.toString());
         }
     }
@@ -300,11 +300,11 @@ public class Xprinter {
                 printer.initializePrinter().sendData(bytes);
                 statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
-                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
+//                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
                 result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
             }
         } catch (Exception e) {
-            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
+//            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,e.toString());
         }
     }
