@@ -217,20 +217,6 @@ class ESCPOS {
 
   ESCPOS getLangPrinter() {
     _data += [
-      27,
-      64,
-      28,
-      46,
-      27,
-      33,
-      0,
-      133,
-      134,
-      135,
-      136,
-      137,
-      138,
-      139,
       140,
       141,
       142,
@@ -391,6 +377,31 @@ class ESCPOS {
     return this;
   }
 
+  ESCPOS defineUserDefinedCharacters(int c1, int c2, Uint8List b) {
+    final command = Uint8List.fromList([27, 38, 3, c1, c2]);
+    _data += Uint8List.fromList([...command, ...b]);
+    return this;
+  }
+
+  ESCPOS selectOrCancelCustomChar(int n) {
+    // Create a Uint8List containing the byte data
+    _data += Uint8List.fromList([27, 37, n]);
+    return this;
+  }
+
+  ESCPOS cancelUserDefinedCharacters(int n) {
+    // Create a Uint8List containing the byte data
+    _data += Uint8List.fromList([27, 63, n]);
+    return this;
+  }
+
+  /// Change font to custom font like '$'
+  ESCPOS changeFontToCustom(String fontCode) {
+    // Assuming custom font codes are defined by the printer manual
+    _data += Uint8List.fromList([27, 38, fontCode.codeUnitAt(0)]);
+    return this;
+  }
+
   ESCPOS cancelChineseChar() {
     _data += Uint8List.fromList([28, 46]);
     return this;
@@ -398,6 +409,11 @@ class ESCPOS {
 
   ESCPOS feedLine() {
     _data += Uint8List.fromList([10]);
+    return this;
+  }
+
+  ESCPOS rawByte(List<int> bytes) {
+    _data += Uint8List.fromList(bytes);
     return this;
   }
 

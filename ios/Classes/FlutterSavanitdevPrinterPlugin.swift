@@ -1,509 +1,656 @@
-import Flutter
-import Darwin
-import UIKit
-import Foundation
-public class FlutterSavanitdevPrinterPlugin:  NSObject,POSBLEManagerDelegate,FlutterPlugin {
-    var test:PrinterManager!
-    var isConnectedGlobal:Bool=false
-    // Create an array of Bike objects
-    var printList: [PrinterManager] = []
-    var queueList:[DispatchQueue] = [];
-    var isConnectedList = [false];
-    var objectArray : [String] = [];
-    var manager: POSBLEManager!
-    var dataArr: [CBPeripheral] = []
-    var rssiList: [NSNumber] = []
-    var addreesCurrent = "";
-  public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "flutter_savanitdev_printer", binaryMessenger: registrar.messenger())
-    let instance = FlutterSavanitdevPrinterPlugin()
-    registrar.addMethodCallDelegate(instance, channel: channel)
-  }
-
-   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-      switch call.method {
-
-      case "connectNet":
-          let ip = call.arguments as! String;
-          connectNet(ip,result: result);
-      case "disconnectNet":
-          let ip = call.arguments as! String;
-          disconnectNet(ip,result: result);
-      case "printRawData":
-          if let args = call.arguments as? Dictionary<String, Any>,
-              let encode = args["encode"] as? String,
-              let isDisconnect = args["isDisconnect"] as? Bool,
-              let ip  = args["ip"] as? String {
-              printRawData(ip, base64String: encode, isDisconnect: isDisconnect,result: result);
-            } else {
-              result(FlutterError.init(code: "bad args", message: nil, details: nil))
-            }
-
-      case "printImgNet":
-          if let args = call.arguments as? Dictionary<String, Any>,
-              let base64String = args["base64String"] as? String,
-              let width = args["width"] as? Int,
-              let isDisconnect = args["isDisconnect"] as? Bool,
-              let ip  = args["ip"] as? String {
-              printImgNet(ip, base64String: base64String,width: width, isDisconnect: isDisconnect,result: result);
-            } else {
-              result(FlutterError.init(code: "bad args", message: nil, details: nil))
-            }
+ import Flutter
+ import Darwin
+ import UIKit
+ import Foundation
 
 
-      case "clearLoops":
-          clearLoops();
+ class PrinterManager {
+     var connectedPrinterMap: [String: WIFIConnecter] = [:]
+    
+     func addPrinter(id: String, printer: WIFIConnecter) {
+         connectedPrinterMap[id] = printer
+         printer.connect(withHost: id, port: 9100)
+     }
+    
+     func removePrinter(id: String) {
+         connectedPrinterMap.removeValue(forKey: id)
+     }
+    
+     func getPrinter(id: String) -> WIFIConnecter? {
+         return connectedPrinterMap[id]
+     }
+    
+     func listPrinters() -> [String: WIFIConnecter] {
+         return connectedPrinterMap
+     }
+ }
 
-      case "initBLE":
-          initBLE();
-
-      case "startScanBLE":
-          startScanBLE();
-
-      case "checkStatusBLE":
-          startScanBLE();
-
-      case "printLangPrinter":
-          printLangPrinter();
-
-      case "getLangModel":
-          getLangModel();
-
-      case "cancelChinese":
-          cancelChinese();
-
-      case "getListDevice":
-          startScanBLE();
-          getListDevice(result: result);
-
-      case "setLang":
-        let codepage = call.arguments as! String;
-          setLang(codepage);
-
-
-      case "connectBLE":
-          let identifiers = call.arguments as! String;
-//          print("identifiers :  \(identifiers)")
-      connectBLE(identifiers,result: result);
-      case "disconnectBLE":
-          let identifiers = call.arguments as! String;
-          disconnectBLE(result: result);
-      case "rawDataBLE":
-          let encode = call.arguments as! String;
-           rawDataBLE(encode,result: result);
-
-      case "image64BaseBLE":
-          if let args = call.arguments as? Dictionary<String, Any>,
-              let base64String = args["base64String"] as? String,
-              let width = args["width"] as? Int
-              {
-              print(width);
-              image64BaseBLE(base64String,width: width,result: result);
-            } else {
-              result(FlutterError.init(code: "bad args", message: nil, details: nil))
-            }
-
-
-
-      default:
-        result(FlutterMethodNotImplemented)
-      }
-    }
-
-      // ------------------ bluetooth function ------------------ //
-
-         @objc
-         func initBLE() {
-              self.manager = POSBLEManager.sharedInstance()
-              self.manager.delegate = self
-             print("init BLE")
-           }
-         @objc
-         func startScanBLE() {
-              self.manager.poSdisconnectRootPeripheral()
-              self.manager.poSstartScan()
-             print("startScanBLE")
-           }
-
-         @objc
-         func checkStatusBLE(_ id :String,result: @escaping FlutterResult) {
-           do {
-               try
-               print("checkStatusBLE")
-               let status = self.manager.connectOK ? "connected" :"no connect"
-               result(status)
-            } catch {
-               print("Failed disconnect: \(error)")
-
-                result(FlutterError.init(code: "ERROR_CODE", message: "Failed disconnect", details: error))
-           }
+ public class FlutterSavanitdevPrinterPlugin:  NSObject, POSWIFIManagerDelegate,WIFIConnecterDelegate,CBCentralManagerDelegate,POSBLEManagerDelegate,FlutterPlugin {
+    
+     var rssiList: [NSNumber] = []
+     var dataArr: [CBPeripheral] = []
+     var startTime: Date?
+     var centralManager: CBCentralManager!
+     var addressCurrent = "";
+     var btManager: POSBLEManager!
+     var statusBLE :Bool=false
+     var setPrinter = Data();
+     let printerManager = PrinterManager()
+     var resultMethod: FlutterResult?
+    
+     @objc
+     func initPrinter() {
+         self.centralManager = CBCentralManager(delegate: self, queue: nil)
+         self.btManager = POSBLEManager.sharedInstance()
+         self.btManager.delegate = self
+     }
+    
+     public static func register(with registrar: FlutterPluginRegistrar) {
+         let channel = FlutterMethodChannel(name: "flutter_savanitdev_printer", binaryMessenger: registrar.messenger())
+         let instance = FlutterSavanitdevPrinterPlugin()
+         instance.initPrinter()
+         registrar.addMethodCallDelegate(instance, channel: channel)
+       
+     }
+    
+     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+         guard let args = call.arguments as? [String: Any] else {
+             result(FlutterError(code: "ERROR_CODE", message: "Invalid arguments", details: "Arguments must be a dictionary"))
+             return
          }
 
-
-        @objc
-        func disconnectBLE(result: @escaping FlutterResult) {
-          do {
-            try self.manager.poSdisconnectRootPeripheral()
-             print("disconnect")
-              self.addreesCurrent = "";
-              result("disconnect")
-           } catch {
-              print("Failed disconnect: \(error)")
-               result(FlutterError.init(code: "ERROR_CODE", message: "Failed disconnect", details: error))
-          }
-        }
-
-         @objc
-         func connectBLE(_ identifiers :String,result: @escaping FlutterResult) {
-               if(dataArr.count > 0){
-             do {
-             if let matchedPeripheral =  dataArr.first { $0.identifier.uuidString == identifiers }{
-                         print("Found peripheral: \(matchedPeripheral.name ?? "Unknown")")
-                         try self.manager.poSconnectDevice(matchedPeripheral);
-                             self.manager.writePeripheral = matchedPeripheral;
-                 self.addreesCurrent = "";
-                         print("connect successfully.")
-                 result("connected")
-                     }else{
-                         print("Peripheral not found")
-//                         result("Peripheral not found")
-                     }
-             } catch {
-                 print("Failed connect: \(error)")
-//               result(FlutterError.init(code: "ERROR_CODE", message: "Failed connect", details: error))
+         switch call.method {
+         case "connectMultiXPrinter":
+             guard let address = args["address"] as? String,
+                   let type = args["type"] as? String else {
+                 result(FlutterError(code: "ERROR_CODE", message: "Invalid parameters", details: "Missing address or portType"))
+                 return
              }
-               }else{
-
-//                 result(FlutterError.init(code: "ERROR_CODE", message: "Please check your printer is enable or not ", details: "error"))
-               }
-           }
-
-        @objc
-        func getListDevice(result: @escaping FlutterResult) {
-                 if dataArr.count > 0 {
-                     var arr: [[String: Any]] = []
-
-                     for peripheral in dataArr {
-                         let peripheralDict: [String: Any] = [
-                             "deviceAddress": peripheral.identifier.uuidString,
-                             "name": peripheral.name ?? "Unknown"
-                         ]
-
-                         arr.append(peripheralDict)
-                     }
-                     print("found device: \(arr)")
-                     result(arr)
-                 } else {
-                     print("not found device")
-                     result(FlutterError.init(code: "ERROR_CODE", message: "not found device", details: "error"))
+             connectMultiXPrinter(address, portType: type, result: result)
+            
+         case "disconnectXPrinter":
+             guard let address = args["address"] as? String else {
+                 result(FlutterError(code: "ERROR_CODE", message: "Invalid parameters", details: "Missing address"))
+                 return
+             }
+             disconnectXPrinter(address, result: result)
+            
+         case "printRawDataESC":
+             guard let address = args["address"] as? String,
+                   let encode = args["encode"] as? String else {
+                 result(FlutterError(code: "ERROR_CODE", message: "Invalid parameters", details: "Missing address or data"))
+                 return
+             }
+             printRawDataESC(address, base64String: encode, result: result)
+            
+         case "printImgESCX":
+             guard let address = args["address"] as? String,
+                   let encode = args["encode"] as? String else {
+                 result(FlutterError(code: "ERROR_CODE", message: "Invalid parameters", details: "Missing address or imageData"))
+                 return
+             }
+             printImgESCX(address, base64String: encode, width: args["width"] as? Int ?? 0, result: result)
+            
+         case "getListDevice":
+             getListDevice(result)
+         default:
+             result(FlutterMethodNotImplemented)
+         }
+     }
+    
+    
+     // MARK: - WIFIConnecterDelegate Methods
+     public func wifiPOSConnected(toHost ip: String, port: UInt16, mac: String) {
+         print("WiFi printer connected - IP: \(ip), Port: \(port), MAC: \(mac)")
+         resultMethod?("CONNECTED")
+         resultMethod = nil
+     }
+    
+     public func wifiPOSDisconnectWithError(_ error: Error?, mac: String, ip: String) {
+         print("WiFi printer disconnected - IP: \(ip), MAC: \(mac)")
+        
+         if let printer = printerManager.getPrinter(id: ip) {
+             printer.disconnect()
+             printerManager.removePrinter(id: ip)
+            
+             if let error = error {
+                 resultMethod?(FlutterError(code: "ERROR_CODE",
+                                        message: "DISCONNECT_ERROR",
+                                        details: "Disconnected with error: \(error.localizedDescription)"))
+             } else {
+                 resultMethod?("Printer disconnected normally")
+             }
+         } else {
+             resultMethod?(FlutterError(code: "ERROR_CODE",
+                                    message: "DISCONNECT_FAIL",
+                                    details: "Failed to disconnect: printer not found at \(ip)"))
+         }
+         resultMethod = nil
+     }
+    
+     public func wifiPOSWriteValue(withTag tag: Int, mac: String, ip: String) {
+         print("WiFi printer write success - IP: \(ip), MAC: \(mac), Tag: \(tag)")
+         disconnectNet(ip,result: resultMethod!)
+         sleep(1)
+        //  statusXprinter(address: ip,result: resultMethod!)
+        resultMethod?("STS_NORMAL")
+     }
+    
+     public func wifiPOSReceiveValue(for data: Data, mac: String, ip: String) {
+         print("WiFi printer data received - IP: \(ip), MAC: \(mac), Data size: \(data.count) bytes")
+     }
+    
+    
+     @objc
+     func connectMultiXPrinter(_ address:String, portType:String, result: @escaping FlutterResult) -> Void {
+         print("Connecting printer: \(address) with type: \(portType)")
+        
+         if portType == "bluetooth" {
+             guard statusBLE else {
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "BLUETOOTH_DISABLED",
+                                   details: "Bluetooth is not enabled on this device"))
+                 return
+             }
+             // Start scanning for Bluetooth devices
+             self.btManager.startScan()
+             self.resultMethod = result
+             connectBLE(address,result: result)
+         } else {
+             connectNet(address, result: result)
+         }
+     }
+    
+     @objc
+     func connectNet(_ address: String, result: @escaping FlutterResult) -> Void {
+         do {
+             print("Connecting to network printer at: \(address)")
+            
+             if printerManager.getPrinter(id: address) != nil {
+                 print("Printer already connected")
+                 result("CONNECTED")
+             } else {
+                 resultMethod = result
+                 guard !address.isEmpty else {
+                     result(FlutterError(code: "ERROR_CODE",
+                                       message: "INVALID_ADDRESS",
+                                       details: "Printer address cannot be empty"))
+                     return
                  }
+            
+                 // Add a printer with an ID
+                 let printer = WIFIConnecter()
+                 printer.delegate = self
+                 printerManager.addPrinter(id: address, printer: printer)
+                 print("Added new printer connection")
              }
-
-         @objc
-         func rawDataBLE(_ encode :String, result: @escaping FlutterResult) {
-            if let data = Data(base64Encoded: encode) {
-             do {
-                 try self.manager.posWriteCommand(with: data)
-                 print("Command sent successfully.")
-                 result("successfully")
-             } catch {
-                 print("Failed to send command: \(error)")
-                result(FlutterError.init(code: "ERROR_CODE", message: "Failed to send command", details: error))
+         } catch let error {
+             print("Connection error for printer at \(address): \(error.localizedDescription)")
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "CONNECT_ERROR",
+                               details: "Failed to connect: \(error.localizedDescription)"))
+         }
+     }
+     @objc
+     func connectBLE(_ identifiers :String, result: @escaping FlutterResult) {
+         resultMethod = result
+                 if let peripheral = dataArr.first(where: { $0.identifier.uuidString == identifiers }){
+                   print("connectBLE")
+                     if(addressCurrent == peripheral.identifier.uuidString){
+                         result("CONNECTED")
+                     }else{
+                         self.btManager.connectDevice(peripheral);
+                     }
+                 }else{
+                     self.btManager.startScan();
+                     result(FlutterError(code: "ERROR_CODE",
+                                       message: "INVALID_ADDRESS",
+                                       details: "Printer address cannot be empty"))
+                 }
+               
+         }
+    
+    
+    
+     @objc
+     func disconnectXPrinter(_ address: String, result: @escaping FlutterResult) {
+         guard !address.isEmpty else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "INVALID_ADDRESS",
+                               details: "Printer address cannot be empty"))
+             return
+         }
+         resultMethod = result
+         if isValidIPAddress(address) {
+             disconnectNet(address,result: result)
+         }else{
+             disconnectBT(result: result)
+         }
+      
+     }
+    
+     @objc
+     func disconnectBT(result: @escaping FlutterResult) {
+            if(self.statusBLE == true){
+                resultMethod = result
+                if(self.btManager.printerIsConnect()){
+                    self.btManager.disconnectRootPeripheral();
+                }else{
+                    result("DISCONNTED");
+                }
+            }else{
+                       result(FlutterError(code: "ERROR_CODE",
+                                         message: "BT_NOT_ENABLE",
+                                           details: "please enable bluetooth"))
+            }
+        }
+    
+    
+    
+     @objc
+     func disconnectNet(_ address: String, result: @escaping FlutterResult) {
+         guard !address.isEmpty else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "INVALID_ADDRESS",
+                               details: "Printer address cannot be empty"))
+             return
+         }
+         resultMethod = result
+         guard let printer = printerManager.getPrinter(id: address) else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "PRINTER_NOT_FOUND",
+                               details: "No printer found at address: \(address)"))
+             return
+         }
+         printer.disconnect()
+         print("Disconnected printer at: \(address)")
+     }
+    
+     @objc
+     func printImgESCX(_ address: String, base64String: String, width: Int, result: @escaping FlutterResult) {
+         guard !address.isEmpty else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "INVALID_ADDRESS",
+                               details: "Printer address cannot be empty"))
+             return
+         }
+        
+         guard !base64String.isEmpty else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "INVALID_DATA",
+                               details: "Image data cannot be empty"))
+             return
+         }
+         resultMethod = result
+         guard let imageData = Data(base64Encoded: base64String) else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "ENCODE_ERROR",
+                               details: "Failed to decode base64 image data"))
+             return
+         }
+         guard let image = UIImage(data: imageData) else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "CONVERT_IMG_ERROR",
+                               details: "Failed to create image from data"))
+             return
+         }
+         guard let img = self.monoImg(image: image, threshold: 0.1) else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "CONVERT_IMG_ERROR",
+                               details: "Failed to convert image to monochrome"))
+             return
+         }
+     
+         let initializePrinter: Data = POSCommand.initializePrinter()
+         let align: Data = POSCommand.selectAlignment(1)
+         let imgData: Data = POSCommand.printRasteBmp(withM: RasterNolmorWH, andImage: img, andType: Dithering)
+         let cut: Data = POSCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1)
+         let spaceH1 = Data("    ".utf8)
+         let spaceH2 = Data("    ".utf8)
+         let concatenatedData = initializePrinter  + align + imgData + cut + spaceH1 + spaceH2
+        
+         if isValidIPAddress(address) {
+             printByteNet(address,data: concatenatedData,result: result)
+         }else{
+             printByteBLE(concatenatedData,result: result)
+         }
+     }
+     @objc
+     func printRawDataESC(_ address: String, base64String: String, result: @escaping FlutterResult) {
+         guard !address.isEmpty else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "INVALID_ADDRESS",
+                               details: "Printer address cannot be empty"))
+             return
+         }
+        
+         guard !base64String.isEmpty else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "INVALID_DATA",
+                               details: "Print data cannot be empty"))
+             return
+         }
+        
+         guard let data = Data(base64Encoded: base64String) else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "INVALID_BASE64",
+                               details: "Failed to decode base64 data"))
+             return
+         }
+         resultMethod = result
+         if isValidIPAddress(address) {
+             printByteNet(address,data: data,result: result)
+         }else{
+             printByteBLE(data,result: result)
+         }
+     }
+    
+     @objc
+     func printByteNet(_ address: String, data :Data,result: @escaping FlutterResult) {
+         guard let printer = printerManager.getPrinter(id: address) else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "PRINTER_NOT_FOUND",
+                               details: "No printer found at address: \(address)"))
+             return
+         }
+          printer.writeCommand(with: data)
+        }
+     @objc
+     func printByteBLE(_ data :Data,result: @escaping FlutterResult) {
+            if(self.statusBLE == true){
+               self.btManager.writeCommand(with: data)
+            }else{
+                result(FlutterError(code: "ERROR_CODE",
+                 message: "BT_NOT_ENABLE",
+                  details: "please enable bluetooth"))
+            }
+        }
+    
+     @objc
+     func statusXprinter(address: String, result: @escaping FlutterResult) {
+         guard let printer = printerManager.getPrinter(id: address) else {
+             result(FlutterError(code: "ERROR_CODE",
+                               message: "PRINTER_NOT_FOUND",
+                               details: "No printer found at address: \(address)"))
+             return
+         }
+         printer.disconnect()
+//         printerManager.removePrinter(id: address)
+         sleep(1)
+         printer.printerStatus { (responseData: Data?) in
+             let byte = [UInt8](responseData!)
+             let status = byte[0]
+            
+             switch status {
+             case 0x12:
+                 print("Ready")
+                 result("STS_NORMAL")
+                
+             case 0x16:
+                 print("Cover opened")
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "STS_COVEROPEN",
+                                   details: "Printer cover is open. Please close the cover and try again"))
+                
+             case 0x32:
+                 print("Paper end")
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "STS_PAPEREMPTY",
+                                   details: "Printer is out of paper. Please add paper and try again"))
+                
+             case 0x36:
+                 print("Cover opened & Paper end")
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "STS_COVEROPEN_STS_PAPEREMPTY",
+                                   details: "Printer cover is open and out of paper. Please close cover and add paper"))
+                
+             default:
+                 print("Error: Unknown status code \(String(format: "0x%02X", status))")
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "PRINT_FAIL",
+                                   details: "Unknown printer status: \(String(format: "0x%02X", status))"))
+             }
+         }
+     }
+    
+     @objc
+     func statusBTXprinter(printer: POSBLEManager, result: @escaping FlutterResult) {
+         self.btManager.printerStatus { (responseData: Data?) in
+             guard let data = responseData else {
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "NO_RESPONSE",
+                                   details: "Printer did not respond to status request"))
+                 return
+             }
+            
+             guard data.count == 1 else {
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "INVALID_RESPONSE",
+                                   details: "Unexpected response length: \(data.count) bytes"))
+                 return
+             }
+            
+             let byte = [UInt8](data)
+             let status = byte[0]
+            
+             switch status {
+             case 0x12:
+                 print("Ready")
+                 result("STS_NORMAL")
+                
+             case 0x16:
+                 print("Cover opened")
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "STS_COVEROPEN",
+                                   details: "Printer cover is open. Please close the cover and try again"))
+                
+             case 0x32:
+                 print("Paper end")
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "STS_PAPEREMPTY",
+                                   details: "Printer is out of paper. Please add paper and try again"))
+                
+             case 0x36:
+                 print("Cover opened & Paper end")
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "STS_COVEROPEN_STS_PAPEREMPTY",
+                                   details: "Printer cover is open and out of paper. Please close cover and add paper"))
+                
+             default:
+                 print("Error: Unknown status code \(String(format: "0x%02X", status))")
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "PRINT_FAIL",
+                                   details: "Unknown printer status: \(String(format: "0x%02X", status))"))
+             }
+         }
+     }
+    
+    
+     // ------------------ bluetooth function ------------------ //
+    
+     @objc
+     func getListDevice(_ result: @escaping FlutterResult) {
+        if(self.statusBLE == true){
+             if dataArr.count > 0 {
+                 var arr: [[String: Any]] = []
+                 for peripheral in dataArr {
+                     let peripheralDict: [String: Any] = [
+                         "address": peripheral.identifier.uuidString,
+                         "name": peripheral.name ?? "Unknown"
+                     ]
+                 
+                     arr.append(peripheralDict)
+                 }
+                 print("found device: \(arr)")
+                 result(arr)
+             } else {
+                 print("not found device")
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "NOT_FOUND",
+                                   details: "not found printer"))
              }
              }else{
-               print("Failed to decode base64 string into data.")
-               result(FlutterError.init(code: "ERROR_CODE", message: "Failed to decode base64 string into data", details: "error"))
 
-              }
+                 result(FlutterError(code: "ERROR_CODE",
+                                   message: "BT_NOT_ENABLE",
+                                   details: "please enable bluetooth"))
+             }
+         }
+    
+     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
+         switch central.state {
+         case .unknown:
+             print("Bluetooth status is UNKNOWN")
+         case .resetting:
+             print("Bluetooth status is RESETTING")
+         case .unsupported:
+             print("Bluetooth is NOT SUPPORTED on this device")
+         case .unauthorized:
+             print("Bluetooth is NOT AUTHORIZED for this app")
+         case .poweredOff:
+             statusBLE = false;
+             print("Bluetooth is currently POWERED OFF")
+             // Handle the case when Bluetooth is turned off
+         case .poweredOn:
+             statusBLE = true;
+             print("Bluetooth is currently POWERED ON")
+             // Handle the case when Bluetooth is turned on
+         @unknown default:
+             print("A previously unknown state occurred")
+         }
+     }
+    
+    
+     public func poSbleUpdatePeripheralList(_ peripherals: [Any]!, rssiList: [Any]!) {
+         if let peripherals = peripherals as? [CBPeripheral], let rssiList = rssiList as? [NSNumber] {
+             self.dataArr = peripherals
+             self.rssiList = rssiList
+             print("update BLE devices : \(String(describing: peripherals))");
+         }
+     }
+    
+     public func poSbleConnect(_ peripheral: CBPeripheral!) {
+         print("poSbleConnect ")
+         addressCurrent = peripheral.identifier.uuidString;
+         resultMethod?("CONNECTED");
+         resultMethod = nil
+     }
+    
+     public func poSbleFail(toConnect peripheral: CBPeripheral!, error: (any Error)!) {
+         print("Bluetooth connection failed")
+         addressCurrent = ""
+         let errorMessage = error?.localizedDescription ?? "Unknown error"
+         resultMethod?(FlutterError(code: "ERROR_CODE",
+                                  message: "BLE_CONNECT_FAILED",
+                                  details: "Failed to connect to device: \(errorMessage)"))
+         resultMethod = nil
+     }
+    
+     public func poSbleDisconnectPeripheral(_ peripheral: CBPeripheral!, error: (any Error)!) {
+         print("Disconnecting Bluetooth peripheral: \(peripheral.identifier.uuidString)")
+         self.btManager.startScan()
+         addressCurrent = ""
+         self.btManager.disconnectRootPeripheral()
+         if let error = error {
+             resultMethod?(FlutterError(code: "ERROR_CODE",
+                                     message: "BLE_DISCONNECT_ERROR",
+                                     details: "Error during disconnect: \(error.localizedDescription)"))
+         } else {
+             resultMethod?("DISCONNECT")
+         }
+         resultMethod = nil
+     }
+    
+     public func poSbleWriteValue(for character: CBCharacteristic!, error: (any Error)!) {
+         if let error = error {
+             print("Bluetooth write error: \(error.localizedDescription)")
+             resultMethod?(FlutterError(code: "ERROR_CODE",
+                                     message: "PRINT_ERROR",
+                                     details: "Failed to write to device: \(error.localizedDescription)"))
+         } else if character != nil {
+             print("Bluetooth write successful")
+             resultMethod?("STS_NORMAL")
+             self.btManager.disconnectRootPeripheral()
+         } else {
+             resultMethod?(FlutterError(code: "ERROR_CODE",
+                                     message: "PRINT_ERROR",
+                                     details: "Invalid characteristic"))
+         }
+         resultMethod = nil
+     }
+    
+     public func poSbleReceiveValue(for characteristic: CBCharacteristic!, error: (any Error)!) {
+         print("poSbleReceiveValue \(characteristic.description) ")
+     }
+    
+     public func poSbleCentralManagerDidUpdateState(_ state: Int) {
+         self.btManager.startScan();
+         print("poSbleCentralManagerDidUpdateState")
+     }
+     // ------------------ bluetooth function ------------------ //
+    
+    
+    
+     // Convert color image
+     func monoImg(image: UIImage, threshold: CGFloat = 0.1) -> UIImage? {
+         // Convert UIImage to CIImage
+         guard let ciImage = CIImage(image: image) else { return nil }
+        
+         // Convert to grayscale
+         let grayscaleFilter = CIFilter(name: "CIColorControls")
+         grayscaleFilter?.setValue(ciImage, forKey: kCIInputImageKey)
+         grayscaleFilter?.setValue(0.0, forKey: kCIInputSaturationKey)  // Remove color
+         grayscaleFilter?.setValue(1.0, forKey: kCIInputContrastKey)    // Maximize contrast
+        
+         guard let grayscaleImage = grayscaleFilter?.outputImage else { return nil }
+        
+         // Apply threshold to create black and white effect
+         let thresholdFilter = CIFilter(name: "CIColorMatrix")
+         thresholdFilter?.setValue(grayscaleImage, forKey: kCIInputImageKey)
+        
+         // Set the threshold to control black and white conversion
+         let thresholdVector = CIVector(x: threshold, y: threshold, z: threshold, w: 0)
+         thresholdFilter?.setValue(thresholdVector, forKey: "inputRVector")
+         thresholdFilter?.setValue(thresholdVector, forKey: "inputGVector")
+         thresholdFilter?.setValue(thresholdVector, forKey: "inputBVector")
+         thresholdFilter?.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputAVector")
+        
+         guard let outputCIImage = thresholdFilter?.outputImage else { return nil }
+        
+         // Create a context and convert to UIImage
+         let context = CIContext(options: nil)
+         if let cgImage = context.createCGImage(outputCIImage, from: outputCIImage.extent) {
+             return UIImage(cgImage: cgImage)
+         }
+        
+         return nil
+     }
+    
+     @objc
+     func byteMerger(byte1: [UInt8], byte2: [UInt8]) -> [UInt8] {
+         var byte3 = [UInt8]()
+         byte3.append(contentsOf: byte1)
+         byte3.append(contentsOf: byte2)
+         return byte3
+     }
+     func isValidIPAddress(_ ipAddress: String) -> Bool {
+           let components = ipAddress.split(separator: ".")
+          
+           // Check if it has exactly 4 components
+           if components.count != 4 {
+               return false
            }
-
-         @objc
-      func image64BaseBLE(_ base64String :String,width:Int, result: @escaping FlutterResult) {
-             guard let imageData = Data(base64Encoded: base64String) else {
-                 print("Failed to decode base64 string into data.")
-                 result(FlutterError.init(code: "ERROR_CODE", message: "Failed to decode base64 string into data", details: "error"))
-                 return
-             }
-             guard let image = UIImage(data: imageData) else {
-                 print("Failed to create UIImage from data.")
-                 result(FlutterError.init(code: "ERROR_CODE", message: "Failed to create UIImage from data", details: "error"))
-
-                 return
-             }
-
-              do {
-                  let align: Data = PosCommand.selectAlignment(1)
-                  let height: Data = PosCommand.printAndFeedLine()
-                  let imageM = ImageTranster.imageCompress(forWidthScale: image, targetWidth: CGFloat(width))
-                  let imgData: Data = PosCommand.printRasteBmp(withM: RasterNolmorWH, andImage: imageM ,andType: Dithering)
-  //                 let cut: Data = PosCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1)
-                   let cut = Data("    ".utf8)
-                   let spaceH1 = Data("    ".utf8)
-                   let spaceH2 = Data("    ".utf8)
-                   let concatenatedData = align + imgData + cut + spaceH1 + spaceH2 + height
-                 try self.manager.posWriteCommand(with: concatenatedData)
-                 print("Command sent successfully 3.")
-                  result("successfully")
-             } catch {
-                 print("Failed to send command: \(error)")
-                 result(FlutterError.init(code: "ERROR_CODE", message: "Failed to send command", details: error))
-
-             }
-         }
-
-         public func poSdidUpdatePeripheralList(_ peripherals: [Any]!, rssiList: [Any]!) {
-             if let peripherals = peripherals as? [CBPeripheral], let rssiList = rssiList as? [NSNumber] {
-                        self.dataArr = peripherals
-                        self.rssiList = rssiList
-
-                          print("update BLE devices : \(String(describing: peripherals[0]))");
-                    }
-         }
-
-         public func poSdidConnect(_ peripheral: CBPeripheral!) {
-             print(" BLE poSdidConnect");
-         }
-
-         public func poSdidFail(toConnect peripheral: CBPeripheral!, error: Error!) {
-             print(" BLE poSdidFail");
-         }
-
-         public func poSdidDisconnectPeripheral(_ peripheral: CBPeripheral!, isAutoDisconnect: Bool) {
-             print(" BLE poSdidDisconnectPeripheral ");
-         }
-
-         public func poSdidWriteValue(for character: CBCharacteristic!, error: Error!) {
-             print(" BLE poSdidWriteValue");
-         }
-
-
-         @objc
-             func byteMerger(byte1: [UInt8], byte2: [UInt8]) -> [UInt8] {
-                 var byte3 = [UInt8]()
-                 byte3.append(contentsOf: byte1)
-                 byte3.append(contentsOf: byte2)
-                 return byte3
-             }
-
-             @objc
-             func setLang(_ codepage :String) {
-              
-             }
-             @objc
-             func printLangPrinter() {
-                 
-             }
-             @objc
-             func getLangModel() {
-               
-             }
-             @objc
-             func cancelChinese() {
-            
-
-             }
-
-
-         // ------------------ bluetooth function ------------------ //
-
-      @objc
-         func clearLoops() {
-           self.printList.removeAll();
-           self.queueList.removeAll();
-           self.isConnectedList.removeAll();
-           self.objectArray.removeAll();
-           self.dataArr.removeAll()
-   
-         }
-
-       @objc
-       func connectNet(_ ip:String,result: @escaping FlutterResult) -> Void {
-          do{
-            if(self.objectArray.contains(ip)){
-                self.addreesCurrent = ip;
-                print("conenct printer 1 : ",ip);
-                result("conenct printer");
-            }else{
-                print("conenct printer 2: ",ip);
-              self.objectArray.append(ip);
-              if let index = self.objectArray.firstIndex(where: { $0 == ip }) {
-              let printer = PrinterManager()
-
-              let queue = DispatchQueue(label: "com.receipt.printer\(index)", qos: .default, attributes: .concurrent, autoreleaseFrequency: .inherit, target: nil)
-              self.printList.append(printer)
-              self.queueList.append(queue);
-              self.isConnectedList.append(false);
-              if(self.objectArray.count > 0 ){
-                  print("objectArray printer 2: ",ip);
-                  self.connectIP(ip,result: result)
-              }
-             }
-            }
-          } catch{
-              self.addreesCurrent = "";
-            print("connect printer catch : ",ip);
-           result(FlutterError.init(code: "ERROR_CODE", message: "connect printer catch", details: ""));
-          }
-        }
-
-      @objc
-      func connectIP(_ ip:String,result: @escaping FlutterResult) -> Void {
-          if let index = self.objectArray.firstIndex(where: { $0 == ip }) {
-              print("objectArray printer 3: ",ip);
-            if(self.printList.count > 0 && self.queueList.count > 0)
-            {
-                print("printList printer 3: ",ip);
-              if (self.isConnectedList[index]) {
-                self.disconnectNet(ip,result: result);
-                self.isConnectedList[index]=false;
-             self.connectNet(ip,result: result);
-              self.addreesCurrent = "";
-                print("disconnect printer index \n",ip);
-              }
-              else
-              {
-                self.queueList[index].async {
-                  self.printList[index]=PrinterManager.share(0,threadID: "com.receipt.printer\(index)");
-                  let isConnected = self.printList[index].connectWifiPrinter(ip, port: 9100);
-                  if(isConnected){
-                    self.isConnectedList[index]=true;
-                    print("check test true : ",isConnected);
-                      self.addreesCurrent = ip;
-                      result("conenct printer");
-                    self.printList[index].startMonitor();
-                  }else{
-                      self.addreesCurrent = "";
-                    print("check test false : ",isConnected);
-                     result(FlutterError.init(code: "ERROR_CODE", message: "check test false", details: ""));
-                  }
-                }
-              }
-            }
-          }
-        }
-
-      @objc
-       func disconnectNet(_ ip :String,result: @escaping FlutterResult) {
-         if(self.isConnectedList.count > 0){
-           if let index = self.objectArray.firstIndex(where: { $0 == ip }) {
-             if(self.isConnectedList[index]){
-                 self.printList[index].disConnectPrinter();
-                 self.printList.remove(at: index);
-                 self.objectArray.remove(at: index);
-//                 self.clearLoops();
-               result("disconnect");
-                 self.addreesCurrent = "";
-             }
-           }else{
-               self.printList.removeAll();
-               self.objectArray.removeAll();
-               result("disconnect");
+          
+           // Check if each component is a number between 0 and 255
+           for component in components {
+               if let number = Int(component), number >= 0 && number <= 255 {
+                   continue
+               } else {
+                   return false
+               }
            }
-         }
+          
+           return true
        }
+ }
 
-      @objc
-      func printImgNet(_ ip:String,base64String :String,width:Int,isDisconnect:Bool,result: @escaping FlutterResult)  -> Void {
-               if(self.isConnectedList.count > 0){
-                 if let index = self.objectArray.firstIndex(where: { $0 == ip }) {
-                   if(self.isConnectedList[index]){
-                     queueList[index].async {
-                       // Convert the Img base64 string to Data
-                       if let imageData = Data(base64Encoded: base64String) {
-                         if let image = UIImage(data: imageData) {
-                           let align:Data=PosCommand.selectAlignment(1);
-                           let Hight  :Data=PosCommand.printAndFeedLine();
-                             let imageM = ImageTranster.imageCompress(forWidthScale: image, targetWidth: CGFloat(width))
-                             let imgData:Data=PosCommand.printRasteBmp(withM: RasterNolmorWH, andImage: imageM, andType: Dithering);
-                           let cut:Data=PosCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1);
-                           let spaceH1 = Data("    ".utf8);
-                           let spaceH2 = Data("    ".utf8);
-                           let concatenatedData = align + imgData + cut + spaceH1 + spaceH2 + Hight
-                           let printSucceed = self.printList[index].sendData(toPrinter: concatenatedData);
-                           if(printSucceed){
-                             print("print1 succeessfully\n");
-                               if(isDisconnect){
-                                  self.disconnectNet(ip,result: result);
-                               }
-                               result("print done");
-                           }else{
-                         let status = self.printList[index].getPrinterStatus();
-                         if(status == "Error"){
-                           result(FlutterError.init(code: "ERROR_CODE", message: status, details: ip));
-                         }
-                        else if(status == "Printer Disconnected"){
-                           if(self.objectArray.count > 0 ){
-                        self.connectIP(ip,result: result);
-                        }
-                        }
-                         else if(status == "Normal"){
-                             result("print Normal");
-                         }
-                        else{
-                          result(FlutterError.init(code: "ERROR_CODE", message: status, details: ip));
-                        }
-                           }
-                         }
-                       }
-                     }
-                   }
-                 }
-               }
-           }
-
-   @objc
-      func printRawData(_ ip:String,base64String :String,isDisconnect:Bool,result: @escaping FlutterResult) -> Void   {
-           if(self.isConnectedList.count > 0){
-             if let index = self.objectArray.firstIndex(where: { $0 == ip }) {
-               if(self.isConnectedList[index]){
-                 print(" print index : ",index);
-                 queueList[index].async {
-                   if let data = Data(base64Encoded: base64String) {
-                     // 'data' now contains the decoded bytes
-                     _ = [UInt8](data)
-                      let printSucceed = self.printList[index].sendData(toPrinter: data);
-                       if(printSucceed){
-                         print("print1 succeessfully\n");
-                           if(isDisconnect){
-                              self.disconnectNet(ip,result: result);
-                           }
-
-                           result("print done");
-                       }else{
-                         let status = self.printList[index].getPrinterStatus();
-                         if(status == "Error"){
-                           result(FlutterError.init(code: "ERROR_CODE", message: status, details: ip));
-                         }
-                        else if(status == "Printer Disconnected"){
-                           self.connectIP(ip,result: result);
-                        }
-                         else if(status == "Normal"){
-                             result("print Normal");
-                         }
-                        else{
-                          result(FlutterError.init(code: "ERROR_CODE", message: status, details: ip));
-                        }
-                       }
-                 }
-               }
-             }
-           }
-        }
-      }
-
-      @objc
-      func sendConfigNet(_ ip:String,data : Data) -> Void   {
-              if(self.isConnectedList.count > 0){
-                if let index = self.objectArray.firstIndex(where: { $0 == ip }) {
-                  if(self.isConnectedList[index]){
-                    print(" print index : ",index);
-                    queueList[index].async {
-                       self.printList[index].sendData(toPrinter: data);
-                  }
-                }
-              }
-           }
-         }
-
-
-  }

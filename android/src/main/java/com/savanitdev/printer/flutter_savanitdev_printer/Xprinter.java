@@ -165,7 +165,7 @@ public class Xprinter {
                 String msg = "";
                 try {
                     Thread.sleep(500);
-                    checkInitConnection(address);
+                     checkInitConnection(address);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -249,6 +249,7 @@ public class Xprinter {
 //                    printer.printBitmap(blist.get(i), POSConst.ALIGNMENT_CENTER, width);
 //                }
                 printer.initializePrinter().printBitmap(bitmapToPrint,POSConst.ALIGNMENT_CENTER,width).cutHalfAndFeed(0);
+                Thread.sleep(500);
                 statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
 //                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
@@ -259,37 +260,7 @@ public class Xprinter {
             result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,e.toString());
         }
     }
-    public void printImgFast(String address, String base64String, boolean isDevicePOS, Integer width, @NonNull MethodChannel.Result result) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection.isConnect()) {
-                POSPrinter printer = new POSPrinter(connection);
-                Bitmap bmp = decodeBase64ToBitmap(base64String);
-//             final Bitmap bmp = BitmapProcess.compressBmpByYourWidth(decodeBase64ToBitmap(base64String), 300 );
-                final Bitmap bitmapToPrint = convertGreyImg(bmp);
-                byte[] processedImageData =  baBmpToSendData(0,bitmapToPrint, BitmapToByteData.BmpType.Dithering);
-                System.out.println("Processed Image Size: " + processedImageData.length + " bytes");
 
-
-                // Send the image in chunks (example: 4 KB chunks)
-                int chunkSize = 4096;
-                int totalChunks = (int) Math.ceil((double) processedImageData.length / chunkSize);
-                for (int i = 0; i < totalChunks; i++) {
-                    int start = i * chunkSize;
-                    int end = Math.min(start + chunkSize, processedImageData.length);
-                    byte[] chunk = Arrays.copyOfRange(processedImageData, start, end);
-                    printer.sendData(chunk);
-                    System.out.println("Sent chunk " + (i + 1) + " of size: " + chunk.length + " bytes");
-                }
-                printer.cutHalfAndFeed(0);
-                statusXprinter(isDevicePOS,address, printer, connection, result);
-            } else {
-                result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
-            }
-        } catch (Exception e) {
-            result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,e.toString());
-        }
-    }
     public void printRawDataESC(String address, String encode,boolean isDevicePOS, @NonNull MethodChannel.Result result) {
         try {
             IDeviceConnection connection = connections.get(address);
@@ -298,6 +269,7 @@ public class Xprinter {
                 byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
                 System.out.println("Sent of size: " + bytes.length + " bytes");
                 printer.initializePrinter().sendData(bytes);
+                Thread.sleep(500);
                 statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
 //                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
