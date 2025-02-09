@@ -194,7 +194,8 @@ public class Xprinter {
                         msg = "STS_NORMAL";
                         if (status > 0) {
                             result.success(msg);
-                        } else if (status == -4) {
+                            // static check for iMin and Sunmi printer
+                        } else if (status == -4 || status == -65) {
                             if (isDevicePOS) {
 //                                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
                                 result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);

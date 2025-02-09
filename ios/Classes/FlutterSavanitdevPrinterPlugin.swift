@@ -129,11 +129,24 @@
      }
     
      public func wifiPOSWriteValue(withTag tag: Int, mac: String, ip: String) {
-         print("WiFi printer write success - IP: \(ip), MAC: \(mac), Tag: \(tag)")
-         disconnectNet(ip,result: resultMethod!)
+         guard let printer = printerManager.getPrinter(id: ip) else {
+             resultMethod!(FlutterError(code: "ERROR_CODE",
+                               message: "PRINTER_NOT_FOUND",
+                               details: "No printer found at address: \(ip)"))
+             return
+         }
+         printer.disconnect()
+         printerManager.removePrinter(id: ip)
          sleep(1)
-        //  statusXprinter(address: ip,result: resultMethod!)
-        resultMethod?("STS_NORMAL")
+         if tag > 0 {
+                print("Print job \(tag) completed successfully.")
+             resultMethod?("STS_NORMAL")
+            } else {
+                print("Print job failed.")
+                resultMethod!(FlutterError(code: "ERROR_CODE",
+                                  message: "PRINT_FAIL",
+                                  details: "Print job failed. \(ip)"))
+            }  
      }
     
      public func wifiPOSReceiveValue(for data: Data, mac: String, ip: String) {
@@ -143,8 +156,6 @@
     
      @objc
      func connectMultiXPrinter(_ address:String, portType:String, result: @escaping FlutterResult) -> Void {
-         print("Connecting printer: \(address) with type: \(portType)")
-        
          if portType == "bluetooth" {
              guard statusBLE else {
                  result(FlutterError(code: "ERROR_CODE",
@@ -164,8 +175,6 @@
      @objc
      func connectNet(_ address: String, result: @escaping FlutterResult) -> Void {
          do {
-             print("Connecting to network printer at: \(address)")
-            
              if printerManager.getPrinter(id: address) != nil {
                  print("Printer already connected")
                  result("CONNECTED")
@@ -265,9 +274,10 @@
          printer.disconnect()
          print("Disconnected printer at: \(address)")
      }
-    
+     
      @objc
      func printImgESCX(_ address: String, base64String: String, width: Int, result: @escaping FlutterResult) {
+         resultMethod = result
          guard !address.isEmpty else {
              result(FlutterError(code: "ERROR_CODE",
                                message: "INVALID_ADDRESS",
@@ -281,7 +291,7 @@
                                details: "Image data cannot be empty"))
              return
          }
-         resultMethod = result
+         
          guard let imageData = Data(base64Encoded: base64String) else {
              result(FlutterError(code: "ERROR_CODE",
                                message: "ENCODE_ERROR",
@@ -289,11 +299,9 @@
              return
          }
          guard let image = UIImage(data: imageData) else {
-             result(FlutterError(code: "ERROR_CODE",
-                               message: "CONVERT_IMG_ERROR",
-                               details: "Failed to create image from data"))
-             return
-         }
+                result(FlutterError(code: "ERROR_CODE", message: "CONVERT_IMG_ERROR", details: "Failed to create image from data"))
+                return
+        }
          guard let img = self.monoImg(image: image, threshold: 0.1) else {
              result(FlutterError(code: "ERROR_CODE",
                                message: "CONVERT_IMG_ERROR",
@@ -349,16 +357,16 @@
      func printByteNet(_ address: String, data :Data,result: @escaping FlutterResult) {
          guard let printer = printerManager.getPrinter(id: address) else {
              result(FlutterError(code: "ERROR_CODE",
-                               message: "PRINTER_NOT_FOUND",
-                               details: "No printer found at address: \(address)"))
+                                 message: "PRINTER_NOT_FOUND",
+                                 details: "No printer found at address: \(address)"))
              return
          }
-          printer.writeCommand(with: data)
-        }
+         printer.writeCommand(with: data)
+     }
      @objc
      func printByteBLE(_ data :Data,result: @escaping FlutterResult) {
             if(self.statusBLE == true){
-               self.btManager.writeCommand(with: data)
+               self.btManager.writeCommand(with: data)        
             }else{
                 result(FlutterError(code: "ERROR_CODE",
                  message: "BT_NOT_ENABLE",
