@@ -4,8 +4,7 @@ import android.content.Context;
 import android.os.Build;
 import android.util.Log;
 import androidx.annotation.NonNull;
-import com.savanitdev.printer.flutter_savanitdev_printer.utils.LogPrinter;
-import com.savanitdev.printer.flutter_savanitdev_printer.utils.StatusPrinter;
+
 import net.posprinter.POSConnect;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -16,15 +15,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
-import zywell.posprinter.utils.DataForSendToPrinterPos80;
-import zywell.posprinter.utils.StringUtils;
 
 /**
  * FlutterSavanitdevPrinterPlugin
@@ -213,11 +209,22 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
         try {
             var usbLists = POSConnect.getUsbDevice(context);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                usbLists.forEach((usb)->{
-                    if(usb.getVendorId() == vendorId && usb.getProductId() == productId){
-                        result.success(usb.getDeviceName());
+                if(usbLists.isEmpty()){
+                    result.error("ERROR", "NOT_FOUND_PRINTER", "");
+                }else{
+                    List<String> address = new ArrayList<>();
+                    usbLists.forEach((usb)->{
+                        if(usb.getVendorId() == vendorId && usb.getProductId() == productId){
+                            address.add(usb.getDeviceName());
+                        }
+                    });
+                    if(address.isEmpty()){
+                        result.error("ERROR", "NOT_FOUND_PRINTER", "");
+                    }else{
+                        result.success(address.get(0));
                     }
-                });
+
+                }
             }
         } catch (Exception e) {
 //            LogPrinter.writeTextFile(context, "statusXprinter.txt", String.valueOf(e));
