@@ -163,12 +163,12 @@ public class Xprinter {
 //                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
                 // Handle the received status here
                 String msg = "";
-                try {
-                    Thread.sleep(500);
-                     checkInitConnection(address);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+//                try {
+//                    Thread.sleep(500);
+//                     checkInitConnection(address);
+//                } catch (InterruptedException e) {
+//                    throw new RuntimeException(e);
+//                }
                 rety = 0;
                 switch (status) {
                     case 0:
