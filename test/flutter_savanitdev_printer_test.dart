@@ -11,19 +11,33 @@ class MockFlutterSavanitdevPrinterPlatform
   Future<String?> getPlatformVersion() => Future.value('42');
 
   @override
-  Future<String?> connectMultiXPrinter(String address, String type) {
+  Future<bool> connectMultiXPrinter(String address, String type) {
     // TODO: implement connectMultiXPrinter
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> cutESCX(String address) {
-    // TODO: implement cutESCX
+  Future<bool> removeConnection(String address) {
+    // TODO: implement removeConnection
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> disconnectXPrinter(String address) {
+  Future<bool> printImgESCX(String address, String encode, int countCut,
+      int width, bool isDevicePOS) {
+    // TODO: implement printImgESCX
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> printRawDataESC(
+      String address, String encode, bool isDevicePOS) {
+    // TODO: implement printRawDataESC
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> disconnectXPrinter(String address) {
     // TODO: implement disconnectXPrinter
     throw UnimplementedError();
   }
@@ -42,16 +56,8 @@ class MockFlutterSavanitdevPrinterPlatform
   }
 
   @override
-  Future<String?> printImgESCX(String address, String encode, int countCut,
-      int width, bool isDevicePOS) {
-    // TODO: implement printImgESCX
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<String?> printRawDataESC(
-      String address, String encode, bool isDevicePOS) {
-    // TODO: implement printRawDataESC
+  Future<String?> cutESCX(String address) {
+    // TODO: implement cutESCX
     throw UnimplementedError();
   }
 
@@ -84,12 +90,6 @@ class MockFlutterSavanitdevPrinterPlatform
   @override
   Future<String?> printerStatusZPL(String address, int timeout) {
     // TODO: implement printerStatusZPL
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<String?> removeConnection(String address) {
-    // TODO: implement removeConnection
     throw UnimplementedError();
   }
 

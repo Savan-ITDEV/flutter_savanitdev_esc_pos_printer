@@ -5,27 +5,27 @@ class FlutterSavanitdevPrinter {
     return FlutterSavanitdevPrinterPlatform.instance.getPlatformVersion();
   }
 
-  Future<String?> connectMultiXPrinter(String address, String type) {
+  Future<bool> connectMultiXPrinter(String address, String type) {
     return FlutterSavanitdevPrinterPlatform.instance
         .connectMultiXPrinter(address, type);
   }
 
-  Future<String?> disconnectXPrinter(String address) {
+  Future<bool> disconnectXPrinter(String address) {
     return FlutterSavanitdevPrinterPlatform.instance
         .disconnectXPrinter(address);
   }
 
-  Future<String?> removeConnection(String address) {
+  Future<bool> removeConnection(String address) {
     return FlutterSavanitdevPrinterPlatform.instance.removeConnection(address);
   }
 
-  Future<String?> printRawDataESC(
+  Future<bool> printRawDataESC(
       String address, String encode, bool isDevicePOS) {
     return FlutterSavanitdevPrinterPlatform.instance
         .printRawDataESC(address, encode, isDevicePOS);
   }
 
-  Future<String?> printImgESCX(String address, String encode, int countCut,
+  Future<bool> printImgESCX(String address, String encode, int countCut,
       int width, bool isDevicePOS) {
     return FlutterSavanitdevPrinterPlatform.instance
         .printImgESCX(address, encode, countCut, width, isDevicePOS);
