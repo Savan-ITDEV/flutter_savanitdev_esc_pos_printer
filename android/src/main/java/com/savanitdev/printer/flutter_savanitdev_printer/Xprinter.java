@@ -67,7 +67,7 @@ public class Xprinter {
             } else if (Objects.equals(portType, "serial")) {
                 type = POSConnect.DEVICE_TYPE_SERIAL;
             }
-            checkInitConnection(address);
+            // checkInitConnection(address);
             IDeviceConnection connection = POSConnect.createDevice(type);
 //                Log.d("TAG", " NEW connection : " + type);
             connections.put(address, connection);  // Store the connection with IP as key
@@ -250,7 +250,7 @@ public class Xprinter {
 //                    printer.printBitmap(blist.get(i), POSConst.ALIGNMENT_CENTER, width);
 //                }
                 printer.initializePrinter().printBitmap(bitmapToPrint,POSConst.ALIGNMENT_CENTER,width).cutHalfAndFeed(0);
-                Thread.sleep(500);
+                // Thread.sleep(500);
                 statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
 //                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
@@ -270,7 +270,7 @@ public class Xprinter {
                 byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
                 System.out.println("Sent of size: " + bytes.length + " bytes");
                 printer.initializePrinter().sendData(bytes);
-                Thread.sleep(500);
+                // Thread.sleep(500);
                 statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
 //                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
