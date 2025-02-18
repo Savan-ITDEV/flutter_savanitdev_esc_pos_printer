@@ -11,9 +11,9 @@ class MethodChannelFlutterSavanitdevPrinter
   final methodChannel = const MethodChannel('flutter_savanitdev_printer');
 
   @override
-  Future<bool> connectMultiXPrinter(String address, String type) async {
+  Future<String?> connectMultiXPrinter(String address, String type) async {
     final version = await methodChannel
-        .invokeMethod('connectMultiXPrinter', <String, dynamic>{
+        .invokeMethod<String>('connectMultiXPrinter', <String, dynamic>{
       'address': address,
       'type': type,
     });
@@ -21,28 +21,28 @@ class MethodChannelFlutterSavanitdevPrinter
   }
 
   @override
-  Future<bool> disconnectXPrinter(String address) async {
+  Future<String?> disconnectXPrinter(String address) async {
     final version = await methodChannel
-        .invokeMethod('disconnectXPrinter', <String, dynamic>{
+        .invokeMethod<String>('disconnectXPrinter', <String, dynamic>{
       'address': address,
     });
     return version;
   }
 
   @override
-  Future<bool> removeConnection(String address) async {
-    final version =
-        await methodChannel.invokeMethod('removeConnection', <String, dynamic>{
+  Future<String?> removeConnection(String address) async {
+    final version = await methodChannel
+        .invokeMethod<String>('removeConnection', <String, dynamic>{
       'address': address,
     });
     return version;
   }
 
   @override
-  Future<bool> printRawDataESC(
+  Future<String?> printRawDataESC(
       String address, String encode, bool isDevicePOS) async {
-    final version =
-        await methodChannel.invokeMethod('printRawDataESC', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('printRawDataESC', <String, dynamic>{
       'address': address,
       'encode': encode,
       'isDevicePOS': isDevicePOS,
@@ -51,10 +51,10 @@ class MethodChannelFlutterSavanitdevPrinter
   }
 
   @override
-  Future<bool> printImgESCX(String address, String encode, int countCut,
+  Future<String?> printImgESCX(String address, String encode, int countCut,
       int width, bool isDevicePOS) async {
-    final version =
-        await methodChannel.invokeMethod('printImgESCX', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('printImgESCX', <String, dynamic>{
       'address': address,
       'encode': encode,
       'width': width,

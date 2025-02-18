@@ -4,7 +4,8 @@ import android.content.Context;
 import android.os.Build;
 import android.util.Log;
 import androidx.annotation.NonNull;
-
+import com.savanitdev.printer.flutter_savanitdev_printer.utils.LogPrinter;
+import com.savanitdev.printer.flutter_savanitdev_printer.utils.StatusPrinter;
 import net.posprinter.POSConnect;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -15,12 +16,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
+import zywell.posprinter.utils.DataForSendToPrinterPos80;
+import zywell.posprinter.utils.StringUtils;
 
 /**
  * FlutterSavanitdevPrinterPlugin
@@ -42,72 +46,40 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
             case "connectMultiXPrinter" -> {
                 String address = call.argument("address");
                 String type = call.argument("type");
-                if (address == null || type == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.connectMultiXPrinter(address, type, result);
             }
             case "disconnectXPrinter" -> {
                 String address = call.argument("address");
-                if (address == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.disconnectXPrinter(address, result);
             }
             case "removeConnection" -> {
                 String address = call.argument("address");
-                if (address == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.removeConnection(address,result);
             }
             case "printRawDataESC" -> {
                 String address = call.argument("address");
                 String encode = call.argument("encode");
-                Boolean isDevicePOS = call.argument("isDevicePOS");
-                if (address == null || encode == null || isDevicePOS == null) {
-                    result.success(false);
-                    return;
-                }
+                boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
                 xprinter.printRawDataESC(address, encode,isDevicePOS, result);
             }
             case "printImgESCX" -> {
                 String address = call.argument("address");
                 String encode = call.argument("encode");
                 Integer width = call.argument("width");
-                Boolean isDevicePOS = call.argument("isDevicePOS");
-                if (address == null || encode == null || width == null || isDevicePOS == null) {
-                    result.success(false);
-                    return;
-                }
+                boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
                 xprinter.printImgESCX(address, encode, isDevicePOS, width, result);
             }
             case "cutESCX" -> {
                 String address = call.argument("address");
-                if (address == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.cutESCX(address, result);
             }
             case "pingDevice" -> {
                 String address = call.argument("address");
                 Integer timeout = call.argument("timeout");
-                if (address == null || timeout == null) {
-                    result.success(false);
-                    return;
-                }
                 pingDevice(address, timeout, result);
             }
             case "startQuickDiscovery" -> {
                 Integer timeout = call.argument("timeout");
-                if (timeout == null) {
-                    result.success(false);
-                    return;
-                }
                 startQuickDiscovery(timeout, result);
             }  case "USBDiscovery" -> {
                 USBDiscovery(result);
@@ -119,10 +91,6 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 Integer width = call.argument("width");
                 Integer x = call.argument("x");
                 Integer y = call.argument("y");
-                if (address == null || encode == null || printCount == null || width == null || x == null || y == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.printImgZPL(address, encode, width, printCount, x, y, result);
             }
             case "printImgCPCL" -> {
@@ -131,10 +99,6 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 Integer width = call.argument("width");
                 Integer x = call.argument("x");
                 Integer y = call.argument("y");
-                if (address == null || encode == null || width == null || x == null || y == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.printImgCPCL(address, encode, width, x, y, result);
             }
             case "printImgTSPL" -> {
@@ -147,73 +111,41 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 Integer n = call.argument("n");
                 Integer x = call.argument("x");
                 Integer y = call.argument("y");
-                if (address == null || encode == null || width == null || widthBmp == null || height == null || m == null || n == null || x == null || y == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.printImgTSPL(address, encode, width, widthBmp, height, m, n, x, y, result);
             }
             case "setPrintSpeed" -> {
                 String address = call.argument("address");
                 Integer speed = call.argument("speed");
-                if (address == null || speed == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.setPrintSpeed(address, speed, result);
             }
             case "setPrintOrientation" -> {
                 String address = call.argument("address");
                 String orientation = call.argument("orientation");
-                if (address == null || orientation == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.setPrintOrientation(address, orientation, result);
             }
             case "printRawDataCPCL" -> {
                 String address = call.argument("address");
                 String encode = call.argument("encode");
-                if (address == null || encode == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.printRawDataCPCL(address, encode, result);
             }
             case "printRawDataTSPL" -> {
                 String address = call.argument("address");
                 String encode = call.argument("encode");
-                if (address == null || encode == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.printRawDataTSPL(address, encode, result);
             }
             case "setPrintDensity" -> {
                 String address = call.argument("address");
                 Integer density = call.argument("density");
-                if (address == null || density == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.setPrintDensity(address, density, result);
             }
             case "printerStatusZPL" -> {
                 String address = call.argument("address");
                 Integer timeout = call.argument("timeout");
-                if (address == null || timeout == null) {
-                    result.success(false);
-                    return;
-                }
                 xprinter.printerStatusZPL(address, timeout, result);
             }
             case "getUSBAddress" -> {
                 Integer productId = call.argument("productId");
                 Integer vendorId = call.argument("vendorId");
-                if (productId == null || vendorId == null) {
-                    result.success(false);
-                    return;
-                }
                 getUSBAddress(productId,vendorId,result);
             }
 
@@ -279,28 +211,13 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
 
     public void getUSBAddress(Integer productId ,Integer vendorId, @NonNull Result result) {
         try {
-            if(productId == null || vendorId == null){
-                result.success(new ArrayList<>());
-                return;
-            }
             var usbLists = POSConnect.getUsbDevice(context);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                if(usbLists.isEmpty()){
-                    result.error("ERROR", "NOT_FOUND_PRINTER", "");
-                }else{
-                    List<String> address = new ArrayList<>();
-                    usbLists.forEach((usb)->{
-                        if(usb.getVendorId() == vendorId && usb.getProductId() == productId){
-                            address.add(usb.getDeviceName());
-                        }
-                    });
-                    if(address.isEmpty()){
-                        result.error("ERROR", "NOT_FOUND_PRINTER", "");
-                    }else{
-                        result.success(address.get(0));
+                usbLists.forEach((usb)->{
+                    if(usb.getVendorId() == vendorId && usb.getProductId() == productId){
+                        result.success(usb.getDeviceName());
                     }
-
-                }
+                });
             }
         } catch (Exception e) {
 //            LogPrinter.writeTextFile(context, "statusXprinter.txt", String.valueOf(e));

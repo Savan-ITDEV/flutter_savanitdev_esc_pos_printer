@@ -27,15 +27,16 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
-  Future<bool> connectMultiXPrinter(String address, String type);
+  Future<String?> connectMultiXPrinter(String address, String type);
 
-  Future<bool> disconnectXPrinter(String address);
+  Future<String?> disconnectXPrinter(String address);
 
-  Future<bool> removeConnection(String address);
+  Future<String?> removeConnection(String address);
 
-  Future<bool> printRawDataESC(String address, String encode, bool isDevicePOS);
+  Future<String?> printRawDataESC(
+      String address, String encode, bool isDevicePOS);
 
-  Future<bool> printImgESCX(
+  Future<String?> printImgESCX(
       String address, String encode, int countCut, int width, bool isDevicePOS);
 
   Future<String?> cutESCX(String address);

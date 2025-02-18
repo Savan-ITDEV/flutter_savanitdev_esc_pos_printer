@@ -23,10 +23,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
 import net.posprinter.CPCLPrinter;
@@ -39,9 +37,13 @@ import net.posprinter.TSPLPrinter;
 import net.posprinter.ZPLPrinter;
 import net.posprinter.model.AlgorithmType;
 import net.posprinter.posprinterface.IDataCallback;
+
+import zywell.posprinter.utils.BitmapProcess;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+
+
 import io.flutter.plugin.common.MethodChannel;
 import zywell.posprinter.utils.BitmapToByteData;
 
@@ -65,7 +67,7 @@ public class Xprinter {
             } else if (Objects.equals(portType, "serial")) {
                 type = POSConnect.DEVICE_TYPE_SERIAL;
             }
-//            checkInitConnection(address);
+            checkInitConnection(address);
             IDeviceConnection connection = POSConnect.createDevice(type);
 //                Log.d("TAG", " NEW connection : " + type);
             connections.put(address, connection);  // Store the connection with IP as key
@@ -81,9 +83,9 @@ public class Xprinter {
             IDeviceConnection connection = connections.get(address);
             if (connection != null) {
                 removeConnection(address,result);
-                result.success(true);
+                result.success(StatusPrinter.DISCONNECT);
             } else {
-                result.success(false);
+                result.error(StatusPrinter.ERROR, StatusPrinter.GET_ID_FAIL, StatusPrinter.GET_ID_FAIL_DETAIL);
             }
         } catch (Exception e) {
             result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT_FAIL,e.toString());
@@ -104,7 +106,7 @@ public class Xprinter {
 //               Log.d("TAG", "Connection removed for IP: " + address);
             } else {
 //               Log.d("TAG", "No connection found for IP: " + address);
-                result.success(false);
+                result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
             }
         }catch (Exception e){
 //           Log.d("TAG", "catch removeConnection : " + e);
@@ -126,7 +128,7 @@ public class Xprinter {
         try {
             if (code == POSConnect.CONNECT_SUCCESS) {
                 rety = 0;
-                result.success(true);
+                result.success(StatusPrinter.CONNECTED);
             } else {
                 if(code == POSConnect.CONNECT_INTERRUPT || code == POSConnect.CONNECT_FAIL){
                     if (rety < maxRety) {
@@ -136,11 +138,11 @@ public class Xprinter {
                     } else {
 //                        Log.d("TAG", " Failed to connect after 3 retries : ");
                         rety = 0; // Reset retry counter
-                        result.success(false);
+                        result.error(StatusPrinter.ERROR, StatusPrinter.RETRY_FAILED,  StatusPrinter.RETRY_FAILED3);
                     }
                 }else{
 //                    LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf("connectListener" + StatusPrinter.PRINTER_DISCONNECT));
-                    result.success(false);
+                    result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                 }
             }
         } catch (Exception e) {
@@ -161,19 +163,17 @@ public class Xprinter {
 //                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
                 // Handle the received status here
                 String msg = "";
-//                try {
-//                    Thread.sleep(500);
-//                     checkInitConnection(address);
-//                } catch (InterruptedException e) {
-//                    throw new RuntimeException(e);
-//                }
+                try {
+                    Thread.sleep(500);
+                     checkInitConnection(address);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
                 rety = 0;
-//                String timeStatus = new SimpleDateFormat("hh:mm:ss.SSS", Locale.getDefault()).format(new Date());
-//                Log.e("Time statusXprinter", timeStatus);
                 switch (status) {
                     case 0:
                         msg = "STS_NORMAL";
-                        result.success(true);
+                        result.success(msg);
                         break;
                     case 8:
                         msg = "STS_COVEROPEN";
@@ -188,23 +188,22 @@ public class Xprinter {
                         result.error(StatusPrinter.ERROR,msg,StatusPrinter.STS_PRESS_FEED);
                         break;
                     case 64:
-                        result.success(false);
+                        result.error(StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, StatusPrinter.STS_PRINTER_ERR);
                         break;
                     default:
                         msg = "STS_NORMAL";
                         if (status > 0) {
-                            result.success(true);
-                            // static check for iMin and Sunmi printer
-                        } else if (status == -4 || status == -65) {
+                            result.success(msg);
+                        } else if (status == -4) {
                             if (isDevicePOS) {
 //                                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
-                                result.success(false);
+                                result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                             } else {
-                                result.success(true);
+                                result.success(msg);
                             }
                         } else {
 //                            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINTER_DISCONNECT));
-                            result.success(false);
+                            result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                         }
                         break;
                 }
@@ -232,29 +231,29 @@ public class Xprinter {
                     Log.d("PrinterCheck", "Printer is still busy...");
                 } else {
                     Log.d("PrinterCheck", "Print job likely completed successfully!");
-                    result.success(true);
+                    result.success(StatusPrinter.STS_NORMAL);
                 }
             }
         });
     }
     public void printImgESCX(String address, String base64String, boolean isDevicePOS, Integer width, @NonNull MethodChannel.Result result) {
         try {
-//            String timeStart = new SimpleDateFormat("hh:mm:ss.SSS", Locale.getDefault()).format(new Date());
-//            Log.e("Time start printImgESCX", timeStart);
-
             IDeviceConnection connection = connections.get(address);
             if (connection.isConnect()) {
                 POSPrinter printer = new POSPrinter(connection);
                 Bitmap bmp = decodeBase64ToBitmap(base64String);
                 final Bitmap bitmapToPrint = convertGreyImg(bmp);
+//                List<Bitmap> blist = new ArrayList<>();
+//                blist = BitmapProcess.cutBitmap(countCut, bitmapToPrint);
+//                for (int i = 0; i < blist.size(); i++) {
+//                    printer.printBitmap(blist.get(i), POSConst.ALIGNMENT_CENTER, width);
+//                }
                 printer.initializePrinter().printBitmap(bitmapToPrint,POSConst.ALIGNMENT_CENTER,width).cutHalfAndFeed(0);
-//                String timeEnd = new SimpleDateFormat("hh:mm:ss.SSS", Locale.getDefault()).format(new Date());
-//                Log.e("Time end printImgESCX", timeEnd);
-//                Thread.sleep(500);
+                Thread.sleep(500);
                 statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
 //                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
-                result.success(false);
+                result.error(StatusPrinter.ERROR,  StatusPrinter.PRINT_FAIL, StatusPrinter.PRINT_FAIL);
             }
         } catch (Exception e) {
 //            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
@@ -270,11 +269,11 @@ public class Xprinter {
                 byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
                 System.out.println("Sent of size: " + bytes.length + " bytes");
                 printer.initializePrinter().sendData(bytes);
-//                Thread.sleep(500);
+                Thread.sleep(500);
                 statusXprinter(isDevicePOS,address, printer, connection, result);
             } else {
 //                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
-                result.success(false);
+                result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
             }
         } catch (Exception e) {
 //            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));

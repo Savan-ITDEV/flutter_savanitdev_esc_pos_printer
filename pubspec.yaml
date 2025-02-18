@@ -1,6 +1,6 @@
 name: flutter_savanitdev_printer
 description: "this package create by savanitdev for using printer and support any language "
-version: 1.1.2
+version: 1.1.3
 homepage: https://github.com/Savan-ITDEV/flutter_savanitdev_esc_pos_printer
 
 environment:
