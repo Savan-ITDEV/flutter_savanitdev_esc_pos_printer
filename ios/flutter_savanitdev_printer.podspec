@@ -5,7 +5,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'flutter_savanitdev_printer'
-  s.version          = '1.0.3'
+  s.version          = '1.1.5'
   s.summary          = 'A new Flutter project.'
   s.description      = <<-DESC
 A new Flutter project.
