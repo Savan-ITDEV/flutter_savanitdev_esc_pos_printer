@@ -42,10 +42,18 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
             case "connectMultiXPrinter" -> {
                 String address = call.argument("address");
                 String type = call.argument("type");
+                  if (address == null || type == null) {
+                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                    return;
+                }
                 xprinter.connectMultiXPrinter(address, type, result);
             }
             case "disconnectXPrinter" -> {
                 String address = call.argument("address");
+                 if (address == null) {
+                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                    return;
+                }
                 xprinter.disconnectXPrinter(address, result);
             }
             case "removeConnection" -> {
@@ -56,6 +64,10 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 String address = call.argument("address");
                 String encode = call.argument("encode");
                 boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
+                 if (address == null || encode == null) {
+                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                    return;
+                }
                 xprinter.printRawDataESC(address, encode,isDevicePOS, result);
             }
             case "printImgESCX" -> {
@@ -63,6 +75,10 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 String encode = call.argument("encode");
                 Integer width = call.argument("width");
                 boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
+                 if (address == null || encode == null || width == null ) {
+                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                    return;
+                }
                 xprinter.printImgESCX(address, encode, isDevicePOS, width, result);
             }
             case "cutESCX" -> {

@@ -10,6 +10,8 @@ import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
@@ -52,65 +54,165 @@ public class Xprinter {
     int rety = 0;
     int maxRety = 3;
     Context contextX;
+
+    // Add a class-level map to track which results have been replied to
+    private final Map<MethodChannel.Result, Boolean> resultReplied = new HashMap<>();
+
+    private synchronized boolean hasReplied(MethodChannel.Result result) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return resultReplied.getOrDefault(result, false);
+        }
+        return false;
+    }
+
+    private synchronized void markReplied(MethodChannel.Result result) {
+        resultReplied.put(result, true);
+    }
+
+    private void safeSuccess(MethodChannel.Result result, Object value) {
+        if (!hasReplied(result)) {
+            markReplied(result);
+            result.success(value);
+        } else {
+            Log.w("Xprinter", "Attempted to reply to an already replied result with success");
+        }
+    }
+
+    private void safeError(MethodChannel.Result result, String errorCode, String errorMessage, Object errorDetails) {
+        if (!hasReplied(result)) {
+            markReplied(result);
+            result.error(errorCode, errorMessage, errorDetails);
+        } else {
+            Log.w("Xprinter", "Attempted to reply to an already replied result with error: " + errorCode);
+        }
+    }
+
     public void initPrinter(Context context) {
         POSConnect.init(context);
         contextX = context;
         Log.e("Xprinter", "Start init");
     }
     public void connectMultiXPrinter(String address, String portType, @NonNull MethodChannel.Result result) {
-        try {
-            int type = POSConnect.DEVICE_TYPE_ETHERNET;
-            if (Objects.equals(portType, "usb")) {
-                type = POSConnect.DEVICE_TYPE_USB;
-            } else if (Objects.equals(portType, "bluetooth")) {
-                type = POSConnect.DEVICE_TYPE_BLUETOOTH;
-            } else if (Objects.equals(portType, "serial")) {
-                type = POSConnect.DEVICE_TYPE_SERIAL;
+        // Move connection operations off the main thread to prevent ANR
+        new Thread(() -> {
+            try {
+                int type = POSConnect.DEVICE_TYPE_ETHERNET;
+                if (Objects.equals(portType, "usb")) {
+                    type = POSConnect.DEVICE_TYPE_USB;
+                } else if (Objects.equals(portType, "bluetooth")) {
+                    type = POSConnect.DEVICE_TYPE_BLUETOOTH;
+                } else if (Objects.equals(portType, "serial")) {
+                    type = POSConnect.DEVICE_TYPE_SERIAL;
+                }
+
+                // Special handling for Bluetooth connections
+                if (type == POSConnect.DEVICE_TYPE_BLUETOOTH) {
+                    // Ensure any existing Bluetooth connection is properly closed first
+                    checkInitConnection(address);
+
+                    // Create the connection on a background thread
+                    final IDeviceConnection connection = POSConnect.createDevice(type);
+                    if (connection == null) {
+                        new Handler(Looper.getMainLooper()).post(() ->
+                                safeError(result, StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Failed to create Bluetooth connection")
+                        );
+                        return;
+                    }
+
+                    connections.put(address, connection);
+
+                    // Connect with timeout to prevent hanging
+                    connection.connect(address, (code, msg) -> {
+                        // Handle connection result on the main thread
+                        new Handler(Looper.getMainLooper()).post(() ->
+                                connectListener(address, code, portType, result)
+                        );
+                    });
+                } else {
+                    // Handle other connection types
+                    checkInitConnection(address);
+                    final IDeviceConnection connection = POSConnect.createDevice(type);
+                    if (connection == null) {
+                        new Handler(Looper.getMainLooper()).post(() ->
+                                safeError(result, StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Failed to create device connection")
+                        );
+                        return;
+                    }
+
+                    connections.put(address, connection);
+                    connection.connect(address, (code, msg) -> {
+                        // Handle connection result on the main thread
+                        new Handler(Looper.getMainLooper()).post(() ->
+                                connectListener(address, code, portType, result)
+                        );
+                    });
+                }
+            } catch (Exception e) {
+                new Handler(Looper.getMainLooper()).post(() ->
+                        safeError(result, StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, e.toString())
+                );
             }
-            checkInitConnection(address);
-            IDeviceConnection connection = POSConnect.createDevice(type);
-//                Log.d("TAG", " NEW connection : " + type);
-            connections.put(address, connection);  // Store the connection with IP as key
-            // Attempt to connect the device and use a callback listener
-            connection.connect(address, (code, msg) -> connectListener(address, code,portType, result));
-        } catch (Exception e) {
-//            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
-            result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, e.toString());
-        }
+        }).start();
     }
     public void disconnectXPrinter(String address, @NonNull MethodChannel.Result result) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null) {
-                removeConnection(address,result);
-                result.success(StatusPrinter.DISCONNECT);
-            } else {
-                result.error(StatusPrinter.ERROR, StatusPrinter.GET_ID_FAIL, StatusPrinter.GET_ID_FAIL_DETAIL);
+        // Move disconnection to background thread
+        new Thread(() -> {
+            try {
+                IDeviceConnection connection = connections.get(address);
+                if (connection != null) {
+                    removeConnection(address, result);
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            safeSuccess(result, StatusPrinter.DISCONNECT)
+                    );
+                } else {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            safeError(result, StatusPrinter.ERROR, StatusPrinter.GET_ID_FAIL, StatusPrinter.GET_ID_FAIL_DETAIL)
+                    );
+                }
+            } catch (Exception e) {
+                new Handler(Looper.getMainLooper()).post(() ->
+                        safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT_FAIL, e.toString())
+                );
             }
-        } catch (Exception e) {
-            result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT_FAIL,e.toString());
-        }
+        }).start();
     }
-    public void removeConnection(String address,@NonNull MethodChannel.Result result) {
-        try
-        {
+    public void removeConnection(String address, @NonNull MethodChannel.Result result) {
+        try {
             // Check if the connection exists for the given IP
             if (!connections.isEmpty() && connections.containsKey(address)) {
                 // Retrieve and close the connection before removing it
                 IDeviceConnection connection = connections.get(address);
                 if (connection != null) {
-                    connection.close();  // Close the connection safely
+                    try {
+                        // Add timeout for close operation to prevent hanging
+                        Thread closeThread = new Thread(() -> {
+                            try {
+                                connection.close();  // Close the connection safely
+                            } catch (Exception e) {
+                                Log.e("Xprinter", "Error closing connection: " + e.getMessage());
+                            }
+                        });
+
+                        closeThread.start();
+
+                        // Wait for close to complete with timeout
+                        closeThread.join(2000); // 2 second timeout
+
+                        // If thread is still running after timeout, interrupt it
+                        if (closeThread.isAlive()) {
+                            closeThread.interrupt();
+                        }
+                    } catch (Exception e) {
+                        Log.e("Xprinter", "Error in connection close: " + e.getMessage());
+                    }
                 }
                 // Remove the connection from the map
                 connections.remove(address);
-//               Log.d("TAG", "Connection removed for IP: " + address);
             } else {
-//               Log.d("TAG", "No connection found for IP: " + address);
-                result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
+                safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
             }
-        }catch (Exception e){
-//           Log.d("TAG", "catch removeConnection : " + e);
-            result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, e.toString());
+        } catch (Exception e) {
+            safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT, e.toString());
         }
     }
     public void checkInitConnection(String address) {
@@ -118,36 +220,60 @@ public class Xprinter {
             // Retrieve and close the connection before removing it
             IDeviceConnection connection = connections.get(address);
             if (connection != null) {
-                connection.close();  // Close the connection safely
+                try {
+                    // Add timeout for close operation to prevent hanging
+                    Thread closeThread = new Thread(() -> {
+                        try {
+                            connection.close();  // Close the connection safely
+                        } catch (Exception e) {
+                            Log.e("Xprinter", "Error closing connection in checkInitConnection: " + e.getMessage());
+                        }
+                    });
+
+                    closeThread.start();
+
+                    // Wait for close to complete with timeout
+                    closeThread.join(2000); // 2 second timeout
+
+                    // If thread is still running after timeout, interrupt it
+                    if (closeThread.isAlive()) {
+                        closeThread.interrupt();
+                    }
+                } catch (Exception e) {
+                    Log.e("Xprinter", "Error in checkInitConnection: " + e.getMessage());
+                }
             }
             connections.remove(address);
-//               Log.d("TAG", "Connection removed for IP: " + address);
+            Log.d("Xprinter", "Connection removed for IP: " + address);
         }
     }
-    private void connectListener(String address, int code,String portType, @NonNull MethodChannel.Result result) {
+    private void connectListener(String address, int code, String portType, @NonNull MethodChannel.Result result) {
         try {
             if (code == POSConnect.CONNECT_SUCCESS) {
                 rety = 0;
-                result.success(StatusPrinter.CONNECTED);
+                safeSuccess(result, StatusPrinter.CONNECTED);
             } else {
                 if(code == POSConnect.CONNECT_INTERRUPT || code == POSConnect.CONNECT_FAIL){
                     if (rety < maxRety) {
                         rety++;
-//                         Log.d("TAG", "Retrying connection, attempt: " + rety);
-                        connectMultiXPrinter(address, portType, result);
+                        // Use a handler instead of direct recursion to avoid stack overflow
+                        // We need to be careful not to reply multiple times to the same result
+                        new Handler(Looper.getMainLooper()).post(() -> {
+                            // Only retry if we haven't replied yet
+                            if (!hasReplied(result)) {
+                                connectMultiXPrinter(address, portType, result);
+                            }
+                        });
                     } else {
-//                        Log.d("TAG", " Failed to connect after 3 retries : ");
                         rety = 0; // Reset retry counter
-                        result.error(StatusPrinter.ERROR, StatusPrinter.RETRY_FAILED,  StatusPrinter.RETRY_FAILED3);
+                        safeError(result, StatusPrinter.ERROR, StatusPrinter.RETRY_FAILED, StatusPrinter.RETRY_FAILED3);
                     }
-                }else{
-//                    LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf("connectListener" + StatusPrinter.PRINTER_DISCONNECT));
-                    result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
+                } else {
+                    safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                 }
             }
         } catch (Exception e) {
-//            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
-            result.error(StatusPrinter.ERROR,StatusPrinter.CONNECT_ERROR, e.toString());
+            safeError(result, StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, e.toString());
         }
     }
     public static Bitmap decodeBase64ToBitmap(String base64String) {
@@ -159,13 +285,11 @@ public class Xprinter {
         try
         {
             printer.printerStatus(status -> {
-//                Log.e("TAG", "================================== > statusXprinter :" + status);
-//                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
                 // Handle the received status here
                 String msg = "";
                 try {
                     Thread.sleep(500);
-                     checkInitConnection(address);
+                    checkInitConnection(address);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -197,20 +321,17 @@ public class Xprinter {
                             // static check for iMin and Sunmi printer
                         } else if (status == -4 || status == -65) {
                             if (isDevicePOS) {
-//                                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(status));
                                 result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                             } else {
                                 result.success(msg);
                             }
                         } else {
-//                            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINTER_DISCONNECT));
                             result.error(StatusPrinter.ERROR,  StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
                         }
                         break;
                 }
             });
         } catch (Exception e){
-//            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
             result.error(StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString());
         }
     }
@@ -220,14 +341,12 @@ public class Xprinter {
             public void receive(byte[] data) {
                 if (data == null || data.length == 0) {
                     Log.e("PrinterCheck", "No response from printer");
-//                    LogPrinter.writeTextFile(contextX,"statusXprinter.txt", "No response from printer");
                     result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,"No response from printer");
                     return;
                 }
                 // Example: Bit 5 (0x20) in the first byte indicates "printing busy"
                 boolean isPrinting = (data[0] & 0x20) != 0; // Replace 0x20 with your printer's flag
                 if (isPrinting) {
-//                    LogPrinter.writeTextFile(contextX,"statusXprinter.txt", "Printer is still busy...");
                     result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,"Printer is still busy...");
                     Log.d("PrinterCheck", "Printer is still busy...");
                 } else {
@@ -238,62 +357,246 @@ public class Xprinter {
         });
     }
     public void printImgESCX(String address, String base64String, boolean isDevicePOS, Integer width, @NonNull MethodChannel.Result result) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection.isConnect()) {
-                POSPrinter printer = new POSPrinter(connection);
-                Bitmap bmp = decodeBase64ToBitmap(base64String);
-                final Bitmap bitmapToPrint = convertGreyImg(bmp);
-//                List<Bitmap> blist = new ArrayList<>();
-//                blist = BitmapProcess.cutBitmap(countCut, bitmapToPrint);
-//                for (int i = 0; i < blist.size(); i++) {
-//                    printer.printBitmap(blist.get(i), POSConst.ALIGNMENT_CENTER, width);
-//                }
-                printer.initializePrinter().printBitmap(bitmapToPrint,POSConst.ALIGNMENT_CENTER,width).cutHalfAndFeed(0);
-                Thread.sleep(500);
-                statusXprinter(isDevicePOS,address, printer, connection, result);
-            } else {
-//                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
-                result.error(StatusPrinter.ERROR,  StatusPrinter.PRINT_FAIL, StatusPrinter.PRINT_FAIL);
+        // Move printing operations to background thread
+        new Thread(() -> {
+            try {
+                IDeviceConnection connection = connections.get(address);
+                if (connection == null) {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT)
+                    );
+                    return;
+                }
+
+                if (connection.isConnect()) {
+                    POSPrinter printer = new POSPrinter(connection);
+                    Bitmap bmp = decodeBase64ToBitmap(base64String);
+                    final Bitmap bitmapToPrint = convertGreyImg(bmp);
+
+                    // Print bitmap with timeout protection
+                    boolean printSuccess = false;
+                    try {
+                        printer.initializePrinter().printBitmap(bitmapToPrint, POSConst.ALIGNMENT_CENTER, width).cutHalfAndFeed(0);
+                        printSuccess = true;
+                    } catch (Exception e) {
+                        Log.e("Xprinter", "Error printing bitmap: " + e.getMessage());
+                        new Handler(Looper.getMainLooper()).post(() ->
+                                safeError(result, StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString())
+                        );
+                        return;
+                    }
+
+                    if (printSuccess) {
+                        try {
+                            // Wait a bit for the printer to process
+                            Thread.sleep(500);
+
+                            // Check printer status
+                            printer.printerStatus(status -> {
+                                String msg = "";
+                                try {
+                                    // Don't close the connection here
+                                    rety = 0;
+                                    switch (status) {
+                                        case 0:
+                                            msg = "STS_NORMAL";
+                                            new Handler(Looper.getMainLooper()).post(() ->
+                                                    safeSuccess(result, "STS_NORMAL")
+                                            );
+                                            break;
+                                        case 8:
+                                            msg = "STS_COVEROPEN";
+                                            new Handler(Looper.getMainLooper()).post(() ->
+                                                    safeError(result, StatusPrinter.ERROR, "STS_COVEROPEN", StatusPrinter.STS_COVEROPEN)
+                                            );
+                                            break;
+                                        case 16:
+                                            msg = "STS_PAPEREMPTY";
+                                            new Handler(Looper.getMainLooper()).post(() ->
+                                                    safeError(result, StatusPrinter.ERROR, "STS_PAPEREMPTY", StatusPrinter.STS_PAPEREMPTY)
+                                            );
+                                            break;
+                                        case 32:
+                                            msg = "STS_PRESS_FEED";
+                                            new Handler(Looper.getMainLooper()).post(() ->
+                                                    safeError(result, StatusPrinter.ERROR, "STS_PRESS_FEED", StatusPrinter.STS_PRESS_FEED)
+                                            );
+                                            break;
+                                        case 64:
+                                            new Handler(Looper.getMainLooper()).post(() ->
+                                                    safeError(result, StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, StatusPrinter.STS_PRINTER_ERR)
+                                            );
+                                            break;
+                                        default:
+                                            msg = "STS_NORMAL";
+                                            if (status > 0) {
+                                                new Handler(Looper.getMainLooper()).post(() ->
+                                                        safeSuccess(result, "STS_NORMAL")
+                                                );
+                                            } else if (status == -4 || status == -65) {
+                                                if (isDevicePOS) {
+                                                    new Handler(Looper.getMainLooper()).post(() ->
+                                                            safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT)
+                                                    );
+                                                } else {
+                                                    new Handler(Looper.getMainLooper()).post(() ->
+                                                            safeSuccess(result, "STS_NORMAL")
+                                                    );
+                                                }
+                                            } else {
+                                                new Handler(Looper.getMainLooper()).post(() ->
+                                                        safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT)
+                                                );
+                                            }
+                                            break;
+                                    }
+                                } catch (Exception e) {
+                                    new Handler(Looper.getMainLooper()).post(() ->
+                                            safeError(result, StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString())
+                                    );
+                                }
+                            });
+                        } catch (Exception e) {
+                            new Handler(Looper.getMainLooper()).post(() ->
+                                    safeError(result, StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString())
+                            );
+                        }
+                    }
+                } else {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            safeError(result, StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, StatusPrinter.PRINT_FAIL)
+                    );
+                }
+            } catch (Exception e) {
+                new Handler(Looper.getMainLooper()).post(() ->
+                        safeError(result, StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString())
+                );
             }
-        } catch (Exception e) {
-//            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
-            result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,e.toString());
-        }
+        }).start();
     }
 
-    public void printRawDataESC(String address, String encode,boolean isDevicePOS, @NonNull MethodChannel.Result result) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null && connection.isConnect()) {
-                POSPrinter printer = new POSPrinter(connection);
-                byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
-                System.out.println("Sent of size: " + bytes.length + " bytes");
-                printer.initializePrinter().sendData(bytes);
-                Thread.sleep(500);
-                statusXprinter(isDevicePOS,address, printer, connection, result);
-            } else {
-//                LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(StatusPrinter.PRINT_FAIL));
-                result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
+    public void printRawDataESC(String address, String encode, boolean isDevicePOS, @NonNull MethodChannel.Result result) {
+        // Move printing operations to background thread
+        new Thread(() -> {
+            try {
+                IDeviceConnection connection = connections.get(address);
+                if (connection == null) {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT)
+                    );
+                    return;
+                }
+
+                if (connection.isConnect()) {
+                    POSPrinter printer = new POSPrinter(connection);
+                    byte[] bytes = Base64.decode(encode, Base64.DEFAULT);
+                    System.out.println("Sent of size: " + bytes.length + " bytes");
+
+                    // Send data with timeout protection
+                    boolean sendSuccess = false;
+                    try {
+                        printer.initializePrinter().sendData(bytes);
+                        sendSuccess = true;
+                    } catch (Exception e) {
+                        Log.e("Xprinter", "Error sending data: " + e.getMessage());
+                        new Handler(Looper.getMainLooper()).post(() ->
+                                safeError(result, StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString())
+                        );
+                        return;
+                    }
+
+                    if (sendSuccess) {
+                        // Use a handler for the delay instead of Thread.sleep
+                        try {
+                            // Wait a bit for the printer to process
+                            Thread.sleep(500);
+
+                            // Check printer status on the same background thread
+                            final POSPrinter finalPrinter = printer;
+                            final IDeviceConnection finalConnection = connection;
+
+                            // Check printer status
+                            printer.printerStatus(status -> {
+                                String msg = "";
+                                switch (status) {
+                                    case 0:
+                                        msg = "STS_NORMAL";
+                                        new Handler(Looper.getMainLooper()).post(() ->
+                                                safeSuccess(result, "STS_NORMAL")
+                                        );
+                                        break;
+                                    case 8:
+                                        msg = "STS_COVEROPEN";
+                                        new Handler(Looper.getMainLooper()).post(() ->
+                                                safeError(result, StatusPrinter.ERROR, "STS_COVEROPEN", StatusPrinter.STS_COVEROPEN)
+                                        );
+                                        break;
+                                    case 16:
+                                        msg = "STS_PAPEREMPTY";
+                                        new Handler(Looper.getMainLooper()).post(() ->
+                                                safeError(result, StatusPrinter.ERROR, "STS_PAPEREMPTY", StatusPrinter.STS_PAPEREMPTY)
+                                        );
+                                        break;
+                                    default:
+                                        if (status > 0) {
+                                            new Handler(Looper.getMainLooper()).post(() ->
+                                                    safeSuccess(result, "STS_NORMAL")
+                                            );
+                                        } else {
+                                            new Handler(Looper.getMainLooper()).post(() ->
+                                                    safeError(result, StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, "Status: " + status)
+                                            );
+                                        }
+                                        break;
+                                }
+                            });
+                        } catch (Exception e) {
+                            new Handler(Looper.getMainLooper()).post(() ->
+                                    safeError(result, StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString())
+                            );
+                        }
+                    }
+                } else {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT)
+                    );
+                }
+            } catch (Exception e) {
+                new Handler(Looper.getMainLooper()).post(() ->
+                        safeError(result, StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString())
+                );
             }
-        } catch (Exception e) {
-//            LogPrinter.writeTextFile(contextX, "statusXprinter.txt", String.valueOf(e));
-            result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,e.toString());
-        }
+        }).start();
     }
     public void cutESCX(String address, @NonNull MethodChannel.Result result) {
-        try {
-            IDeviceConnection connection = connections.get(address);
-            if (connection != null && connection.isConnect()) {
-                POSPrinter printer = new POSPrinter(connection);
-                printer.cutHalfAndFeed(1);
-                result.success(StatusPrinter.STS_NORMAL);
-            } else {
-                result.error(StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT);
+        // Move to background thread
+        new Thread(() -> {
+            try {
+                IDeviceConnection connection = connections.get(address);
+                if (connection == null) {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT)
+                    );
+                    return;
+                }
+
+                if (connection.isConnect()) {
+                    POSPrinter printer = new POSPrinter(connection);
+                    printer.cutHalfAndFeed(1);
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            safeSuccess(result, StatusPrinter.STS_NORMAL)
+                    );
+                } else {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            safeError(result, StatusPrinter.ERROR, StatusPrinter.DISCONNECT, StatusPrinter.PRINTER_DISCONNECT)
+                    );
+                }
+            } catch (Exception e) {
+                new Handler(Looper.getMainLooper()).post(() ->
+                        safeError(result, StatusPrinter.ERROR, e.toString(), e.toString())
+                );
             }
-        } catch (Exception e) {
-            result.error(StatusPrinter.ERROR, e.toString(), e.toString());
-        }
+        }).start();
     }
     public static Bitmap convertGreyImg(Bitmap img) {
         int width = img.getWidth();
