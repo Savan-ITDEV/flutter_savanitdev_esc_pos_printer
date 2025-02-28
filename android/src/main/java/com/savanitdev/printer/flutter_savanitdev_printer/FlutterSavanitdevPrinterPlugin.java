@@ -5,6 +5,8 @@ import android.os.Build;
 import android.util.Log;
 import androidx.annotation.NonNull;
 
+import com.savanitdev.printer.flutter_savanitdev_printer.utils.StatusPrinter;
+
 import net.posprinter.POSConnect;
 import java.io.IOException;
 import java.net.DatagramPacket;
