@@ -7,8 +7,7 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
 
   static final Object _token = Object();
 
-  static FlutterSavanitdevPrinterPlatform _instance =
-      MethodChannelFlutterSavanitdevPrinter();
+  static FlutterSavanitdevPrinterPlatform _instance = MethodChannelFlutterSavanitdevPrinter();
 
   /// The default instance of [FlutterSavanitdevPrinterPlatform] to use.
   ///
@@ -27,17 +26,28 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
+  Future<List> discovery(String type, int timeout);
+  Future<bool> connect(String address, String type, bool isCloseConnection);
+  Future<bool> disconnect(String address);
+  Future<bool> printCommand({
+    String address = "",
+    String iniCommand = "",
+    String cutterCommands = "",
+    String img = "",
+    String encode = "",
+    bool isCut = false,
+    bool isDisconnect = false,
+    bool isDevicePOS = false,
+  });
   Future<String?> connectMultiXPrinter(String address, String type);
 
   Future<String?> disconnectXPrinter(String address);
 
   Future<String?> removeConnection(String address);
 
-  Future<String?> printRawDataESC(
-      String address, String encode, bool isDevicePOS);
+  Future<String?> printRawDataESC(String address, String encode, bool isDevicePOS);
 
-  Future<String?> printImgESCX(
-      String address, String encode, int countCut, int width, bool isDevicePOS);
+  Future<String?> printImgESCX(String address, String encode, int countCut, int width, bool isDevicePOS);
 
   Future<String?> cutESCX(String address);
 
@@ -46,11 +56,9 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
   Future<String?> startQuickDiscovery(int timeout);
   Future<List> USBDiscovery();
 
-  Future<String?> printImgZPL(
-      String address, String encode, int printCount, int width, int x, int y);
+  Future<String?> printImgZPL(String address, String encode, int printCount, int width, int x, int y);
 
-  Future<String?> printImgCPCL(
-      String address, String encode, int width, int x, int y);
+  Future<String?> printImgCPCL(String address, String encode, int width, int x, int y);
 
   Future<String?> printImgTSPL(
     String address,
@@ -83,8 +91,7 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
   Future<String?> disconnectZyWell(String address);
   Future<String?> getPrinterStatusZyWell(String address);
   Future<String?> printRawZyWell(String address, String encode);
-  Future<String?> printImgZyWell(
-      String address, String encode, bool isCut, int width, int cutCount);
+  Future<String?> printImgZyWell(String address, String encode, bool isCut, int width, int cutCount);
 
   // ============= ESC POS command ==================//
   Future<List<int>> selectAlignment(String align);

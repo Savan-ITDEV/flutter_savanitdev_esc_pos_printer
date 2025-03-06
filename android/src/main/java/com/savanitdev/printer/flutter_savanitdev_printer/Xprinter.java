@@ -18,6 +18,7 @@ import android.util.Log;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import com.savanitdev.printer.flutter_savanitdev_printer.utils.LogPrinter;
+import com.savanitdev.printer.flutter_savanitdev_printer.utils.ResultStatus;
 import com.savanitdev.printer.flutter_savanitdev_printer.utils.StatusPrinter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -54,6 +55,7 @@ public class Xprinter {
     int rety = 0;
     int maxRety = 3;
     Context contextX;
+    ResultStatus resultStatus = new ResultStatus();
 
     // Add a class-level map to track which results have been replied to
     private final Map<MethodChannel.Result, Boolean> resultReplied = new HashMap<>();
@@ -68,7 +70,6 @@ public class Xprinter {
     private synchronized void markReplied(MethodChannel.Result result) {
         resultReplied.put(result, true);
     }
-
     private void safeSuccess(MethodChannel.Result result, Object value) {
         if (!hasReplied(result)) {
             markReplied(result);
@@ -86,7 +87,6 @@ public class Xprinter {
             Log.w("Xprinter", "Attempted to reply to an already replied result with error: " + errorCode);
         }
     }
-
     public void initPrinter(Context context) {
         POSConnect.init(context);
         contextX = context;
@@ -474,7 +474,6 @@ public class Xprinter {
             }
         }).start();
     }
-
     public void printRawDataESC(String address, String encode, boolean isDevicePOS, @NonNull MethodChannel.Result result) {
         // Move printing operations to background thread
         new Thread(() -> {
@@ -598,6 +597,155 @@ public class Xprinter {
             }
         }).start();
     }
+
+
+    // =========================== function species printer ===========================
+
+    public void connect(String address, String portType,boolean isCloseConnection, @NonNull MethodChannel.Result result) {
+        try {
+            int type = POSConnect.DEVICE_TYPE_ETHERNET;
+            if (Objects.equals(portType, "usb")) {
+                type = POSConnect.DEVICE_TYPE_USB;
+            } else if (Objects.equals(portType, "bluetooth")) {
+                type = POSConnect.DEVICE_TYPE_BLUETOOTH;
+            } else if (Objects.equals(portType, "serial")) {
+                type = POSConnect.DEVICE_TYPE_SERIAL;
+            }
+            if(isCloseConnection){
+                checkInitConnection(address);
+            }
+            IDeviceConnection connection = POSConnect.createDevice(type);
+            connections.put(address, connection);
+            connection.connect(address, (code, msg) ->
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            listener(address, code,portType,isCloseConnection, result)
+                    ));
+
+        } catch (Exception e) {
+            resultStatus.setResult(result,false);
+        }
+
+    }
+    private void listener(String address, int code,String portType,boolean isCloseConnection, @NonNull MethodChannel.Result result) {
+        try {
+            if (code == POSConnect.CONNECT_SUCCESS) {
+                rety = 0;
+                resultStatus.setResult(result,true);
+            } else {
+                if(code == POSConnect.CONNECT_INTERRUPT || code == POSConnect.CONNECT_FAIL){
+                    if (rety < maxRety) {
+                        rety++;
+                        connect(address, portType,isCloseConnection, result);
+                    } else {
+                        rety = 0; // Reset retry counter
+                        resultStatus.setResult(result,false);
+                    }
+                }else{
+                    resultStatus.setResult(result,false);
+                }
+            }
+        } catch (Exception e) {
+            resultStatus.setResult(result,false);
+        }
+    }
+    public void print(String address,String iniCommand,String cutterCommands, String encode,String img,boolean isCut,boolean isDisconnect, boolean isDevicePOS, @NonNull MethodChannel.Result result) {
+            try {
+                IDeviceConnection connection = connections.get(address);
+                if (connection == null) {
+                    resultStatus.setResult(result,false);
+                    return;
+                }
+                if (connection.isConnect()) {
+                    POSPrinter printer = new POSPrinter(connection);
+                    byte[] bytes = Base64.decode(iniCommand, Base64.DEFAULT);
+                    byte[] endBytes = Base64.decode(cutterCommands, Base64.DEFAULT);
+                    byte[] encodeBytes = Base64.decode(encode, Base64.DEFAULT);
+                        printer.initializePrinter().setAlignment(POSConst.ALIGNMENT_CENTER);
+                        if (!iniCommand.isEmpty()) {
+                            printer.sendData(bytes);
+                        }
+                        if (!img.isEmpty()) {
+                            Bitmap bmp = decodeBase64ToBitmap(img);
+                            final Bitmap bitmapToPrint = convertGreyImg(bmp);
+                            printer.printBitmap(bitmapToPrint, POSConst.ALIGNMENT_CENTER, 576);
+                        }
+                        if (!encode.isEmpty()) {
+                            printer.sendData(encodeBytes);
+                        }
+                        if (isCut && cutterCommands.isEmpty()) {
+                            printer.cutHalfAndFeed(0);
+                        }
+                         if (isCut && !cutterCommands.isEmpty()) {
+                         printer.sendData(endBytes);
+                         }
+                            Thread.sleep(500);
+                            status(isDevicePOS, isDisconnect, address, printer, result);
+
+                } else {
+                    resultStatus.setResult(result,false);
+                }
+            } catch (Exception e) {
+                resultStatus.setResult(result,false);
+            }
+
+    }
+    public void status(boolean isDevicePOS,boolean isDisconnect,String address, POSPrinter printer, @NonNull MethodChannel.Result result) {
+            try {
+                printer.printerStatus(status -> {
+                    try {
+                        if (isDisconnect) {
+                            Thread.sleep(500);
+                            checkInitConnection(address);
+                        }
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    rety = 0;
+                    switch (status) {
+                        case 0:
+                            resultStatus.setResult(result,true);
+                            break;
+                        case 8, 16, 32, 64:
+                            resultStatus.setResult(result,false);
+                            break;
+                        default:
+                            if (status > 0) {
+                                resultStatus.setResult(result,false);
+                            } else if (status == -4 || status == -65) {
+                                if (isDevicePOS) {
+                                    resultStatus.setResult(result,false);
+                                } else {
+                                    resultStatus.setResult(result,true);
+                                }
+                            } else {
+                                resultStatus.setResult(result,false);
+                            }
+                            break;
+                    }
+                });
+            } catch (Exception e) {
+                resultStatus.setResult(result,false);
+            }
+
+    }
+    public void disconnect(String address, @NonNull MethodChannel.Result result) {
+            try {
+                IDeviceConnection connection = connections.get(address);
+                if (connection != null) {
+                    connection.close();
+                    connections.remove(address);
+                    resultStatus.setResult(result,true);
+                } else {
+                    resultStatus.setResult(result,false);
+                }
+            } catch (Exception e) {
+                resultStatus.setResult(result,false);
+            }
+    }
+
+    // =========================== function species printer ===========================
+
+
     public static Bitmap convertGreyImg(Bitmap img) {
         int width = img.getWidth();
         int height = img.getHeight();
