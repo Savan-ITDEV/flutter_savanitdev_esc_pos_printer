@@ -5,30 +5,58 @@ class FlutterSavanitdevPrinter {
     return FlutterSavanitdevPrinterPlatform.instance.getPlatformVersion();
   }
 
+  Future<List> discovery(String type, int timeout) {
+    return FlutterSavanitdevPrinterPlatform.instance.discovery(type, timeout);
+  }
+
+  Future<bool> connect(String address, String type, bool isCloseConnection) {
+    return FlutterSavanitdevPrinterPlatform.instance.connect(address, type, isCloseConnection);
+  }
+
+  Future<bool> disconnect(String address) {
+    return FlutterSavanitdevPrinterPlatform.instance.disconnect(address);
+  }
+
+  Future<bool> printCommand({
+    String address = "",
+    String iniCommand = "",
+    String cutterCommands = "",
+    String img = "",
+    String encode = "",
+    bool isCut = false,
+    bool isDisconnect = false,
+    bool isDevicePOS = false,
+  }) {
+    return FlutterSavanitdevPrinterPlatform.instance.printCommand(
+      address: address,
+      iniCommand: iniCommand,
+      cutterCommands: cutterCommands,
+      img: img,
+      encode: encode,
+      isCut: isCut,
+      isDisconnect: isDisconnect,
+      isDevicePOS: isDevicePOS,
+    );
+  }
+
   Future<String?> connectMultiXPrinter(String address, String type) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .connectMultiXPrinter(address, type);
+    return FlutterSavanitdevPrinterPlatform.instance.connectMultiXPrinter(address, type);
   }
 
   Future<String?> disconnectXPrinter(String address) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .disconnectXPrinter(address);
+    return FlutterSavanitdevPrinterPlatform.instance.disconnectXPrinter(address);
   }
 
   Future<String?> removeConnection(String address) {
     return FlutterSavanitdevPrinterPlatform.instance.removeConnection(address);
   }
 
-  Future<String?> printRawDataESC(
-      String address, String encode, bool isDevicePOS) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .printRawDataESC(address, encode, isDevicePOS);
+  Future<String?> printRawDataESC(String address, String encode, bool isDevicePOS) {
+    return FlutterSavanitdevPrinterPlatform.instance.printRawDataESC(address, encode, isDevicePOS);
   }
 
-  Future<String?> printImgESCX(String address, String encode, int countCut,
-      int width, bool isDevicePOS) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .printImgESCX(address, encode, countCut, width, isDevicePOS);
+  Future<String?> printImgESCX(String address, String encode, int countCut, int width, bool isDevicePOS) {
+    return FlutterSavanitdevPrinterPlatform.instance.printImgESCX(address, encode, countCut, width, isDevicePOS);
   }
 
   Future<String?> cutESCX(String address) {
@@ -36,29 +64,23 @@ class FlutterSavanitdevPrinter {
   }
 
   Future<String?> pingDevice(String address, int timeout) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .pingDevice(address, timeout);
+    return FlutterSavanitdevPrinterPlatform.instance.pingDevice(address, timeout);
   }
 
   Future<String?> startQuickDiscovery(int timeout) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .startQuickDiscovery(timeout);
+    return FlutterSavanitdevPrinterPlatform.instance.startQuickDiscovery(timeout);
   }
 
   Future<List> USBDiscovery() {
     return FlutterSavanitdevPrinterPlatform.instance.USBDiscovery();
   }
 
-  Future<String?> printImgZPL(
-      String address, String encode, int printCount, int width, int x, int y) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .printImgZPL(address, encode, printCount, width, x, y);
+  Future<String?> printImgZPL(String address, String encode, int printCount, int width, int x, int y) {
+    return FlutterSavanitdevPrinterPlatform.instance.printImgZPL(address, encode, printCount, width, x, y);
   }
 
-  Future<String?> printImgCPCL(
-      String address, String encode, int width, int x, int y) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .printImgCPCL(address, encode, width, x, y);
+  Future<String?> printImgCPCL(String address, String encode, int width, int x, int y) {
+    return FlutterSavanitdevPrinterPlatform.instance.printImgCPCL(address, encode, width, x, y);
   }
 
   Future<String?> printImgTSPL(
@@ -72,8 +94,7 @@ class FlutterSavanitdevPrinter {
     int x,
     int y,
   ) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .printImgTSPL(address, encode, width, widthBmp, height, m, n, x, y);
+    return FlutterSavanitdevPrinterPlatform.instance.printImgTSPL(address, encode, width, widthBmp, height, m, n, x, y);
   }
 
   Future<String?> setPrintSpeed(String address, int speed) {
@@ -119,14 +140,12 @@ class FlutterSavanitdevPrinter {
   }
 
   Future<String?> getUSBAddress(int productId, int vendorId) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .getUSBAddress(productId, vendorId);
+    return FlutterSavanitdevPrinterPlatform.instance.getUSBAddress(productId, vendorId);
   }
 
   // ============= ZyWell Printer ==================//
   Future<String?> connectZyWell(String address, String type) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .connectZyWell(address, type);
+    return FlutterSavanitdevPrinterPlatform.instance.connectZyWell(address, type);
   }
 
   Future<String?> disconnectZyWell(String address) {
@@ -134,19 +153,15 @@ class FlutterSavanitdevPrinter {
   }
 
   Future<String?> getPrinterStatusZyWell(String address) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .getPrinterStatusZyWell(address);
+    return FlutterSavanitdevPrinterPlatform.instance.getPrinterStatusZyWell(address);
   }
 
   Future<String?> printRawZyWell(String address, String encode) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .printRawZyWell(address, encode);
+    return FlutterSavanitdevPrinterPlatform.instance.printRawZyWell(address, encode);
   }
 
-  Future<String?> printImgZyWell(
-      String address, String encode, bool isCut, int width, int cutCount) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .printImgZyWell(address, encode, isCut, width, cutCount);
+  Future<String?> printImgZyWell(String address, String encode, bool isCut, int width, int cutCount) {
+    return FlutterSavanitdevPrinterPlatform.instance.printImgZyWell(address, encode, isCut, width, cutCount);
   }
 
   // ============= ESC POS command ==================//
@@ -176,23 +191,19 @@ class FlutterSavanitdevPrinter {
   }
 
   Future<List<int>> selectHRICharacterPrintPosition(int n) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .selectHRICharacterPrintPosition(n);
+    return FlutterSavanitdevPrinterPlatform.instance.selectHRICharacterPrintPosition(n);
   }
 
   Future<List<int>> selectInternationalCharacterSets(int n) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .selectInternationalCharacterSets(n);
+    return FlutterSavanitdevPrinterPlatform.instance.selectInternationalCharacterSets(n);
   }
 
   Future<List<int>> printBarcode(int m, int n, String content) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .printBarcode(m, n, content);
+    return FlutterSavanitdevPrinterPlatform.instance.printBarcode(m, n, content);
   }
 
   Future<List<int>> setAbsolutePrintPosition(int m, int n) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .setAbsolutePrintPosition(m, n);
+    return FlutterSavanitdevPrinterPlatform.instance.setAbsolutePrintPosition(m, n);
   }
 
   Future<List<int>> text(String text, String codePage) {
@@ -201,8 +212,7 @@ class FlutterSavanitdevPrinter {
 
   //Module size. Range[1, 16], Default
   Future<List<int>> printQRcode(int n, int errLevel, String code) {
-    return FlutterSavanitdevPrinterPlatform.instance
-        .printQRcode(n, errLevel, code);
+    return FlutterSavanitdevPrinterPlatform.instance.printQRcode(n, errLevel, code);
   }
 
   Future<List<int>> cut() {

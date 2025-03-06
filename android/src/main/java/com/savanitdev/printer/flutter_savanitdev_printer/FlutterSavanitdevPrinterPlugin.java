@@ -1,10 +1,30 @@
 package com.savanitdev.printer.flutter_savanitdev_printer;
 
-import android.content.Context;
-import android.os.Build;
-import android.util.Log;
-import androidx.annotation.NonNull;
 
+import static com.savanitdev.printer.flutter_savanitdev_printer.BluetoothAdapters.bluetoothDiscovery;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentActivity;
+import com.savanitdev.printer.flutter_savanitdev_printer.utils.DeviceReceiver;
+import com.savanitdev.printer.flutter_savanitdev_printer.utils.ResultStatus;
 import com.savanitdev.printer.flutter_savanitdev_printer.utils.StatusPrinter;
 
 import net.posprinter.POSConnect;
@@ -15,31 +35,82 @@ import java.net.InetAddress;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
+import io.flutter.plugin.common.PluginRegistry;
 
 /**
  * FlutterSavanitdevPrinterPlugin
  */
-public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCallHandler {
+public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityAware, MethodCallHandler, PluginRegistry.RequestPermissionsResultListener {
     private MethodChannel channel;
     Context context;
     Xprinter xprinter = new Xprinter();
     Zywell zywell = new Zywell();
     USBAdapter usbAdapter = new USBAdapter();
+    private List<String> usbList,usblist;
+    private Activity activity;
+    private BluetoothAdapter bluetoothAdapter;
+    private MethodChannel.Result pendingResult;
+    private DeviceReceiver BtReciever;
+    private ActivityPluginBinding activityBinding;
+    private static final int REQUEST_COARSE_LOCATION_PERMISSIONS = 1451;
+    static ResultStatus resultStatus = new ResultStatus();
+    private static final int PERMISSION_REQUEST_CODE = 1024;
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+
         switch (call.method) {
             case "getPlatformVersion" -> {
-                result.success("Android " + android.os.Build.VERSION.RELEASE);
+                result.success("Android " + Build.VERSION.RELEASE);
             }
+            //  ================>      Xprinter function species printer        <================    //
+            case "connect" -> {
+                String address = call.argument("address");
+                boolean isCloseConnection = Boolean.TRUE.equals(call.argument("isCloseConnection"));
+                String type = call.argument("type");
+                if (address == null || type == null ) {
+                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                    return;
+                }
+                xprinter.connect(address, type,isCloseConnection, result);
+            }
+            case "disconnect" -> {
+                String address = call.argument("address");
+                if (address == null) {
+                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                    return;
+                }
+                xprinter.disconnect(address, result);
+            }
+            case "printCommand" -> {
+                String address = call.argument("address");
+                String iniCommand = call.argument("iniCommand");
+                String cutterCommands = call.argument("cutterCommands");
+                String img = call.argument("img");
+                String encode = call.argument("encode");
+                boolean isCut = Boolean.TRUE.equals(call.argument("isCut"));
+                boolean isDisconnect = Boolean.TRUE.equals(call.argument("isDisconnect"));
+                boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
+                if (address == null || iniCommand == null || cutterCommands == null || img == null || encode == null) {
+                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                    return;
+                }
+                xprinter.print(address,iniCommand,cutterCommands,encode,img,isCut,isDisconnect,isDevicePOS, result);
+            }
+
             //  ================>      Xprinter libray method        <================    //
             case "connectMultiXPrinter" -> {
                 String address = call.argument("address");
@@ -87,117 +158,77 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 String address = call.argument("address");
                 xprinter.cutESCX(address, result);
             }
-            case "pingDevice" -> {
-                String address = call.argument("address");
-                Integer timeout = call.argument("timeout");
-                pingDevice(address, timeout, result);
-            }
-            case "startQuickDiscovery" -> {
-                Integer timeout = call.argument("timeout");
-                startQuickDiscovery(timeout, result);
-            }  case "USBDiscovery" -> {
+
+            case "USBDiscovery" -> {
                 USBDiscovery(result);
-            }
-            case "printImgZPL" -> {
-                String address = call.argument("address");
-                String encode = call.argument("encode");
-                Integer printCount = call.argument("printCount");
-                Integer width = call.argument("width");
-                Integer x = call.argument("x");
-                Integer y = call.argument("y");
-                xprinter.printImgZPL(address, encode, width, printCount, x, y, result);
-            }
-            case "printImgCPCL" -> {
-                String address = call.argument("address");
-                String encode = call.argument("encode");
-                Integer width = call.argument("width");
-                Integer x = call.argument("x");
-                Integer y = call.argument("y");
-                xprinter.printImgCPCL(address, encode, width, x, y, result);
-            }
-            case "printImgTSPL" -> {
-                String address = call.argument("address");
-                String encode = call.argument("encode");
-                Integer width = call.argument("width");
-                Integer widthBmp = call.argument("widthBmp");
-                Integer height = call.argument("height");
-                Integer m = call.argument("m");
-                Integer n = call.argument("n");
-                Integer x = call.argument("x");
-                Integer y = call.argument("y");
-                xprinter.printImgTSPL(address, encode, width, widthBmp, height, m, n, x, y, result);
-            }
-            case "setPrintSpeed" -> {
-                String address = call.argument("address");
-                Integer speed = call.argument("speed");
-                xprinter.setPrintSpeed(address, speed, result);
-            }
-            case "setPrintOrientation" -> {
-                String address = call.argument("address");
-                String orientation = call.argument("orientation");
-                xprinter.setPrintOrientation(address, orientation, result);
-            }
-            case "printRawDataCPCL" -> {
-                String address = call.argument("address");
-                String encode = call.argument("encode");
-                xprinter.printRawDataCPCL(address, encode, result);
-            }
-            case "printRawDataTSPL" -> {
-                String address = call.argument("address");
-                String encode = call.argument("encode");
-                xprinter.printRawDataTSPL(address, encode, result);
-            }
-            case "setPrintDensity" -> {
-                String address = call.argument("address");
-                Integer density = call.argument("density");
-                xprinter.setPrintDensity(address, density, result);
-            }
-            case "printerStatusZPL" -> {
-                String address = call.argument("address");
-                Integer timeout = call.argument("timeout");
-                xprinter.printerStatusZPL(address, timeout, result);
             }
             case "getUSBAddress" -> {
                 Integer productId = call.argument("productId");
                 Integer vendorId = call.argument("vendorId");
-                getUSBAddress(productId,vendorId,result);
+                USBAdapter.getUSBAddress(context,productId,vendorId,result);
             }
 
             case "tryGetUsbPermission" ->{
-                usbAdapter.tryGetUsbPermission(context);
-
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    USBAdapter.tryGetUsbPermission(context);
+                }
             }
-            //  ================>      ZyWell libray method        <================    //
-
-            case "connectZyWell" -> {
-                String address = call.argument("address");
+            case "openBluetoothSettings" ->{
+                if (!hasBluetoothScan()) {
+                    BluetoothAdapters.openBluetoothSettings(activity, result);
+                }else{
+                    result.success(new ArrayList<>());
+                }
+            }
+            case "discovery" -> {
                 String type = call.argument("type");
-                zywell.connectZyWell(address,type, result);
+                Integer timeout = call.argument("timeout");
+                if (type == null || timeout == null) {
+                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                    return;
+                }
+                discovery(type,timeout, result);
             }
-            case "disconnectZyWell" -> {
-                String address = call.argument("address");
-                zywell.disconnectZyWell(result);
-            }
-            case "getPrinterStatusZyWell" -> {
-                String address = call.argument("address");
-                zywell.getPrinterStatusZyWell(address, result);
-            }
-            case "printRawZyWell" -> {
-                String address = call.argument("address");
-                String encode = call.argument("encode");
-                zywell.printRawZyWell(address,encode, result);
-            }
-            case "printImgZyWell" -> {
-                String address = call.argument("address");
-                String encode = call.argument("encode");
-                boolean isCut = call.argument("isCut");
-                int width = call.argument("width");
-                int cutCount = call.argument("cutCount");
-                zywell.printImgZyWell(address,encode,isCut,width,cutCount,result);
-            }
+
             default -> result.notImplemented();
         }
     }
+    public boolean hasBluetoothScan() {
+        boolean hasBluetoothScan = ActivityCompat.checkSelfPermission(activity,
+                Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
+        boolean hasBluetoothConnect = ActivityCompat.checkSelfPermission(activity,
+                Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+        if (hasBluetoothScan || hasBluetoothConnect) {
+            return true;
+        }else{
+            return false;
+        }
+    }
+    public void discovery(String type, Integer timeout, @NonNull Result result) {
+        if(Objects.equals(type, "usb")){
+            USBAdapter.usbDiscovery(context,result);
+        }else if(Objects.equals(type, "bluetooth")){
+            pendingResult = result;
+            BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            IntentFilter filterStart=new IntentFilter(BluetoothDevice.ACTION_FOUND);
+            IntentFilter filterEnd=new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+            context.registerReceiver(BtReciever, filterStart);
+            context.registerReceiver(BtReciever, filterEnd);
+
+            if (bluetoothAdapter == null) {
+                result.error("BLUETOOTH_UNAVAILABLE", "Bluetooth is not available on this device", null);
+                return;
+            }
+            if (!hasBluetoothScan()) {
+                BluetoothAdapters.reqBlePermission(bluetoothAdapter, activity,result);
+                return;
+            }
+            BluetoothAdapters.bluetoothDiscovery( bluetoothAdapter, activity,result);
+        }else{
+            NetworkUtils.netDiscovery(timeout,result);
+        }
+    }
+
     public void USBDiscovery( @NonNull Result result) {
         try {
             // List to hold discovered printers
@@ -218,111 +249,8 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
                 result.success(printersArray);
             }
         } catch (Exception e) {
-//            LogPrinter.writeTextFile(context, "statusXprinter.txt", String.valueOf(e));
             result.error("ERROR", e.toString(), "");
         }
-    }
-
-    public void getUSBAddress(Integer productId ,Integer vendorId, @NonNull Result result) {
-        try {
-            var usbLists = POSConnect.getUsbDevice(context);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                if(usbLists.isEmpty()){
-                    result.error("ERROR", "NOT_FOUND_PRINTER", "");
-                }else{
-                    List<String> address = new ArrayList<>();
-                    usbLists.forEach((usb)->{
-                        if(usb.getVendorId() == vendorId && usb.getProductId() == productId){
-                            address.add(usb.getDeviceName());
-                        }
-                    });
-                    if(address.isEmpty()){
-                        result.error("ERROR", "NOT_FOUND_PRINTER", "");
-                    }else{
-                        result.success(address.get(0));
-                    }
-
-                }
-            }
-        } catch (Exception e) {
-//            LogPrinter.writeTextFile(context, "statusXprinter.txt", String.valueOf(e));
-            result.error("ERROR", e.toString(), "");
-        }
-    }
-
-    private void pingDevice(String address, int timeout, @NonNull Result result) {
-        try {
-            NetworkUtils.fastPingAndGetNetworkSpeed(address, timeout, result);
-        } catch (Exception exe) {
-            Log.d("TAG", "Exception--: " + exe);
-            result.error("ERROR", exe.toString(), "");
-        }
-    }
-
-
-    public void startQuickDiscovery(Integer timeout, @NonNull Result result) {
-        new Thread(() -> {
-            DatagramSocket socket = null;
-            try {
-                // Close any existing socket
-                if (socket != null) {
-                    socket.isClosed();
-                }
-
-                // Create a new DatagramSocket
-                socket = new DatagramSocket(5001);
-                socket.setSoTimeout(timeout); // Set the timeout for receiving data
-                byte[] sendData = "ZY0001FIND".getBytes();
-
-                // Create and send a broadcast UDP packet
-                DatagramPacket sendPacket = new DatagramPacket(
-                        sendData,
-                        sendData.length,
-                        InetAddress.getByName("255.255.255.255"),
-                        1460
-                );
-                socket.send(sendPacket);
-
-                // Prepare buffer for receiving data
-                byte[] receiveData = new byte[1024];
-                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-
-                // List to hold discovered printers
-                List<Map<String, String>> printersArray = new ArrayList<>();
-                boolean listening = true;
-
-                while (listening) {
-                    try {
-                        socket.receive(receivePacket); // Wait for a response
-                        String receivedString = new String(receivePacket.getData(), 0, receivePacket.getLength());
-
-                        // Create a map to store printer information
-                        Map<String, String> printerInfo = new HashMap<>();
-                        printerInfo.put("ipAddress", receivePacket.getAddress().toString());
-                        printerInfo.put("message", receivedString);
-
-                        // Add the printer info to the list
-                        printersArray.add(printerInfo);
-                    } catch (SocketTimeoutException e) {
-                        listening = false; // Stop listening on timeout
-                    } catch (IOException e) {
-                        Log.e("PrinterDiscovery", "Error receiving packet", e);
-                        result.error("IO_EXCEPTION", e.toString(), null);
-                    }
-                }
-
-                result.success(printersArray);
-
-            } catch (IOException e) {
-                Log.e("PrinterDiscovery", "Error during discovery", e);
-                result.error("DISCOVERY_ERROR", e.toString(), null);
-            } finally {
-                // Close the socket
-                if (socket != null && !socket.isClosed()) {
-                    socket.close();
-                }
-            }
-        }).start();
     }
 
     @Override
@@ -332,11 +260,66 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
         context = flutterPluginBinding.getApplicationContext();
         xprinter.initPrinter(context);
         zywell.initPrinterZyWell(context);
-
     }
-
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
         channel.setMethodCallHandler(null);
     }
+
+    @Override
+    public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+        activityBinding = binding;
+        activityBinding.getActivity();
+        activity = binding.getActivity();
+        // Register for activity result
+           binding.addActivityResultListener(
+                   (requestCode, resultCode, data) -> {
+//                       Toast.makeText(context, "Test systems", Toast.LENGTH_SHORT).show();
+                           if (pendingResult != null && resultCode == Activity.RESULT_OK) {
+                               BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+                                bluetoothDiscovery(bluetoothAdapter, activity, pendingResult);
+                                pendingResult = null;
+                                return true;
+                           }
+                       assert pendingResult != null;
+                       pendingResult.success(new ArrayList<>());
+                       return false;
+                   }
+           );
+    }
+
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+
+    }
+    private void getBondedDevices(Result result) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        result.success(list);
+    }
+    @Override
+    public boolean onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+
+        if (requestCode == REQUEST_COARSE_LOCATION_PERMISSIONS) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                getBondedDevices(pendingResult);
+            } else {
+                pendingResult.error("no_permissions", "this plugin requires location permissions for scanning", null);
+                pendingResult = null;
+            }
+            return true;
+        }
+        return false;
+    }
+
 }
+
