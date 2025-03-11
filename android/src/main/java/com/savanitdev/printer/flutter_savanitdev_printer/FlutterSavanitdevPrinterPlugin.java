@@ -1,9 +1,13 @@
 package com.savanitdev.printer.flutter_savanitdev_printer;
 
+import android.app.Activity;
+import android.app.Application;
 import android.content.Context;
 import android.os.Build;
+import android.os.Bundle;
 import android.util.Log;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.savanitdev.printer.flutter_savanitdev_printer.utils.StatusPrinter;
 
@@ -17,6 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.MethodCall;
@@ -27,28 +33,30 @@ import io.flutter.plugin.common.MethodChannel.Result;
 /**
  * FlutterSavanitdevPrinterPlugin
  */
-public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCallHandler {
+public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCallHandler, Application.ActivityLifecycleCallbacks {
     private MethodChannel channel;
     Context context;
     Xprinter xprinter = new Xprinter();
     Zywell zywell = new Zywell();
     USBAdapter usbAdapter = new USBAdapter();
-
+    ExecutorService executor = Executors.newSingleThreadExecutor();
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+        executor.execute(() -> {
         switch (call.method) {
             case "getPlatformVersion" -> {
                 result.success("Android " + android.os.Build.VERSION.RELEASE);
             }
             //  ================>      Xprinter libray method        <================    //
             case "connectMultiXPrinter" -> {
+
                 String address = call.argument("address");
                 String type = call.argument("type");
                   if (address == null || type == null) {
                     result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
                     return;
                 }
-                xprinter.connectMultiXPrinter(address, type, result);
+              xprinter.connectMultiXPrinter(address, type, result);
             }
             case "disconnectXPrinter" -> {
                 String address = call.argument("address");
@@ -197,6 +205,8 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
             }
             default -> result.notImplemented();
         }
+
+        });
     }
     public void USBDiscovery( @NonNull Result result) {
         try {
@@ -258,7 +268,6 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
             result.error("ERROR", exe.toString(), "");
         }
     }
-
 
     public void startQuickDiscovery(Integer timeout, @NonNull Result result) {
         new Thread(() -> {
@@ -338,5 +347,40 @@ public class FlutterSavanitdevPrinterPlugin implements FlutterPlugin, MethodCall
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
         channel.setMethodCallHandler(null);
+    }
+
+    @Override
+    public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {
+
+    }
+
+    @Override
+    public void onActivityStarted(@NonNull Activity activity) {
+
+    }
+
+    @Override
+    public void onActivityResumed(@NonNull Activity activity) {
+
+    }
+
+    @Override
+    public void onActivityPaused(@NonNull Activity activity) {
+
+    }
+
+    @Override
+    public void onActivityStopped(@NonNull Activity activity) {
+
+    }
+
+    @Override
+    public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {
+
+    }
+
+    @Override
+    public void onActivityDestroyed(@NonNull Activity activity) {
+        executor.shutdown();
     }
 }
