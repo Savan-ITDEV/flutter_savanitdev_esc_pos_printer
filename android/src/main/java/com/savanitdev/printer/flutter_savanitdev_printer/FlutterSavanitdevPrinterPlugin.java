@@ -40,6 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
@@ -68,10 +70,10 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
     private static final int REQUEST_COARSE_LOCATION_PERMISSIONS = 1451;
     static ResultStatus resultStatus = new ResultStatus();
     private static final int PERMISSION_REQUEST_CODE = 1024;
-
+    ExecutorService executor = Executors.newSingleThreadExecutor();
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-
+        executor.execute(() -> {
         switch (call.method) {
             case "getPlatformVersion" -> {
                 result.success("Android " + Build.VERSION.RELEASE);
@@ -192,6 +194,7 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
 
             default -> result.notImplemented();
         }
+        });
     }
     public boolean hasBluetoothScan() {
         boolean hasBluetoothScan = ActivityCompat.checkSelfPermission(activity,

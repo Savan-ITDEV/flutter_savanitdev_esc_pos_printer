@@ -27,18 +27,18 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
   }
 
   Future<List> discovery(String type, int timeout);
-  Future<bool> connect(String address, String type, bool isCloseConnection);
-  Future<bool> disconnect(String address);
-  Future<bool> printCommand({
-    String address = "",
-    String iniCommand = "",
-    String cutterCommands = "",
-    String img = "",
-    String encode = "",
-    bool isCut = false,
-    bool isDisconnect = false,
-    bool isDevicePOS = false,
-  });
+  Future<bool> connect(String address, String type, bool isCloseConnection, int timeout);
+  Future<bool> disconnect(String address, int timeout);
+  Future<bool> printCommand(
+      {String address = "",
+      String iniCommand = "",
+      String cutterCommands = "",
+      String img = "",
+      String encode = "",
+      bool isCut = false,
+      bool isDisconnect = false,
+      bool isDevicePOS = false,
+      int timeout});
   Future<String?> connectMultiXPrinter(String address, String type);
 
   Future<String?> disconnectXPrinter(String address);

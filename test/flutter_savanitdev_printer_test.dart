@@ -4,7 +4,9 @@ import 'package:flutter_savanitdev_printer/flutter_savanitdev_printer_platform_i
 import 'package:flutter_savanitdev_printer/flutter_savanitdev_printer_method_channel.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class MockFlutterSavanitdevPrinterPlatform with MockPlatformInterfaceMixin implements FlutterSavanitdevPrinterPlatform {
+class MockFlutterSavanitdevPrinterPlatform
+    with MockPlatformInterfaceMixin
+    implements FlutterSavanitdevPrinterPlatform {
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
   @override
@@ -14,29 +16,30 @@ class MockFlutterSavanitdevPrinterPlatform with MockPlatformInterfaceMixin imple
   }
 
   @override
-  Future<bool> connect(String address, String type, bool isCloseConnection) {
+  Future<bool> connect(
+      String address, String type, bool isCloseConnection, int timeout) {
     // TODO: implement connectMultiXPrinter
     throw UnimplementedError();
   }
 
   @override
-  Future<bool> disconnect(String address) {
+  Future<bool> disconnect(String address, int timeout) {
     // TODO: implement connectMultiXPrinter
     throw UnimplementedError();
   }
 
   @override
-  Future<bool> print({
-    String address,
-    String iniCommand,
-    String cutterCommands,
-    String img,
-    String encode,
-    bool isCut,
-    bool isDisconnect,
-    bool isDevicePOS,
-  }) {
-    // TODO: implement connectMultiXPrinter
+  Future<bool> printCommand(
+      {String address = "",
+      String iniCommand = "",
+      String cutterCommands = "",
+      String img = "",
+      String encode = "",
+      bool isCut = false,
+      bool isDisconnect = false,
+      bool isDevicePOS = false,
+      int timeout = 30}) {
+    // TODO: implement printCommand
     throw UnimplementedError();
   }
 
@@ -65,32 +68,36 @@ class MockFlutterSavanitdevPrinterPlatform with MockPlatformInterfaceMixin imple
   }
 
   @override
-  Future<String?> printImgCPCL(String address, String encode, int width, int x, int y) {
+  Future<String?> printImgCPCL(
+      String address, String encode, int width, int x, int y) {
     // TODO: implement printImgCPCL
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> printImgESCX(String address, String encode, int countCut, int width, bool isDevicePOS) {
+  Future<String?> printImgESCX(String address, String encode, int countCut,
+      int width, bool isDevicePOS) {
     // TODO: implement printImgESCX
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> printRawDataESC(String address, String encode, bool isDevicePOS) {
+  Future<String?> printRawDataESC(
+      String address, String encode, bool isDevicePOS) {
     // TODO: implement printRawDataESC
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> printImgTSPL(
-      String address, String encode, int width, int widthBmp, int height, int m, int n, int x, int y) {
+  Future<String?> printImgTSPL(String address, String encode, int width,
+      int widthBmp, int height, int m, int n, int x, int y) {
     // TODO: implement printImgTSPL
     throw UnimplementedError();
   }
 
   @override
-  Future<String?> printImgZPL(String address, String encode, int printCount, int width, int x, int y) {
+  Future<String?> printImgZPL(
+      String address, String encode, int printCount, int width, int x, int y) {
     // TODO: implement printImgZPL
     throw UnimplementedError();
   }
@@ -188,7 +195,8 @@ class MockFlutterSavanitdevPrinterPlatform with MockPlatformInterfaceMixin imple
   }
 
   @override
-  Future<String?> printImgZyWell(String address, String encode, bool isCut, int width, int cutCount) {
+  Future<String?> printImgZyWell(
+      String address, String encode, bool isCut, int width, int cutCount) {
     // TODO: implement startQuickDiscovery
     throw UnimplementedError();
   }
@@ -293,15 +301,19 @@ class MockFlutterSavanitdevPrinterPlatform with MockPlatformInterfaceMixin imple
 }
 
 void main() {
-  final FlutterSavanitdevPrinterPlatform initialPlatform = FlutterSavanitdevPrinterPlatform.instance;
+  final FlutterSavanitdevPrinterPlatform initialPlatform =
+      FlutterSavanitdevPrinterPlatform.instance;
 
   test('$MethodChannelFlutterSavanitdevPrinter is the default instance', () {
-    expect(initialPlatform, isInstanceOf<MethodChannelFlutterSavanitdevPrinter>());
+    expect(
+        initialPlatform, isInstanceOf<MethodChannelFlutterSavanitdevPrinter>());
   });
 
   test('getPlatformVersion', () async {
-    FlutterSavanitdevPrinter flutterSavanitdevPrinterPlugin = FlutterSavanitdevPrinter();
-    MockFlutterSavanitdevPrinterPlatform fakePlatform = MockFlutterSavanitdevPrinterPlatform();
+    FlutterSavanitdevPrinter flutterSavanitdevPrinterPlugin =
+        FlutterSavanitdevPrinter();
+    MockFlutterSavanitdevPrinterPlatform fakePlatform =
+        MockFlutterSavanitdevPrinterPlatform();
     FlutterSavanitdevPrinterPlatform.instance = fakePlatform;
 
     expect(await flutterSavanitdevPrinterPlugin.getPlatformVersion(), '42');

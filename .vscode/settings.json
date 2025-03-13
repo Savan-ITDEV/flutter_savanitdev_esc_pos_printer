@@ -1,4 +1,8 @@
 {
   "cSpell.words": ["Savanitdev"],
-  "editor.quickSuggestions": false
+  "editor.quickSuggestions": {
+    "comments": "off",
+    "strings": "off",
+    "other": "off"
+  }
 }

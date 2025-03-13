@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-
+import 'dart:async';
 import 'flutter_savanitdev_printer_platform_interface.dart';
 
 /// An implementation of [FlutterSavanitdevPrinterPlatform] that uses method channels.
@@ -36,47 +36,68 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
   @override
   Future<List> discovery(String type, int timeout) async {
     try {
-      return await discoveryLoop(type, timeout);
+      return await discoveryLoop(type, timeout).timeout(
+        Duration(seconds: timeout), // กำหนด Timeout 5 นาที
+        onTimeout: () {
+          throw TimeoutException("Method timed out after 5 minutes.");
+        },
+      );
+    } on TimeoutException catch (e) {
+      return [];
     } catch (e) {
       return [];
     }
   }
 
   @override
-  Future<bool> connect(String address, String type, bool isCloseConnection) async {
+  Future<bool> connect(String address, String type, bool isCloseConnection, int timeout) async {
     try {
       final version = await methodChannel.invokeMethod('connect', <String, dynamic>{
         'address': address,
         'type': type,
         'isCloseConnection': isCloseConnection,
-      });
+      }).timeout(
+        Duration(seconds: timeout ?? 30), // กำหนด Timeout 5 นาที
+        onTimeout: () {
+          throw TimeoutException("Method timed out after 5 minutes.");
+        },
+      );
       return version;
+    } on TimeoutException catch (e) {
+      return false;
     } catch (e) {
       return false;
     }
   }
 
   @override
-  Future<bool> disconnect(String address) async {
+  Future<bool> disconnect(String address, int timeout) async {
     try {
-      final version = await methodChannel.invokeMethod('disconnect', <String, dynamic>{'address': address});
+      final version = await methodChannel.invokeMethod('disconnect', <String, dynamic>{'address': address}).timeout(
+        Duration(seconds: timeout ?? 30), // กำหนด Timeout 5 นาที
+        onTimeout: () {
+          throw TimeoutException("Method disconnect timed out after 5 minutes.");
+        },
+      );
       return version;
+    } on TimeoutException catch (e) {
+      return false;
     } catch (e) {
       return false;
     }
   }
 
   @override
-  Future<bool> printCommand({
-    String address = "",
-    String iniCommand = "",
-    String cutterCommands = "",
-    String img = "",
-    String encode = "",
-    bool isCut = false,
-    bool isDisconnect = false,
-    bool isDevicePOS = false,
-  }) async {
+  Future<bool> printCommand(
+      {String address = "",
+      String iniCommand = "",
+      String cutterCommands = "",
+      String img = "",
+      String encode = "",
+      bool isCut = false,
+      bool isDisconnect = false,
+      bool isDevicePOS = false,
+      int timeout = 30}) async {
     try {
       final version = await methodChannel.invokeMethod('printCommand', {
         'address': address,
@@ -87,8 +108,15 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
         'isCut': isCut,
         'isDisconnect': isDisconnect,
         'isDevicePOS': isDevicePOS,
-      });
+      }).timeout(
+        Duration(seconds: timeout), // กำหนด Timeout 30
+        onTimeout: () {
+          throw TimeoutException("Method disconnect timed out after 5 minutes.");
+        },
+      );
       return version;
+    } on TimeoutException catch (e) {
+      return false;
     } catch (e) {
       return false;
     }

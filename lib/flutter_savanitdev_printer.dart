@@ -9,34 +9,34 @@ class FlutterSavanitdevPrinter {
     return FlutterSavanitdevPrinterPlatform.instance.discovery(type, timeout);
   }
 
-  Future<bool> connect(String address, String type, bool isCloseConnection) {
-    return FlutterSavanitdevPrinterPlatform.instance.connect(address, type, isCloseConnection);
+  Future<bool> connect(String address, String type, bool isCloseConnection, int timeout) {
+    return FlutterSavanitdevPrinterPlatform.instance.connect(address, type, isCloseConnection, timeout);
   }
 
-  Future<bool> disconnect(String address) {
-    return FlutterSavanitdevPrinterPlatform.instance.disconnect(address);
+  Future<bool> disconnect(String address, int timeout) {
+    return FlutterSavanitdevPrinterPlatform.instance.disconnect(address, timeout);
   }
 
-  Future<bool> printCommand({
-    String address = "",
-    String iniCommand = "",
-    String cutterCommands = "",
-    String img = "",
-    String encode = "",
-    bool isCut = false,
-    bool isDisconnect = false,
-    bool isDevicePOS = false,
-  }) {
+  Future<bool> printCommand(
+      {String address = "",
+      String iniCommand = "",
+      String cutterCommands = "",
+      String img = "",
+      String encode = "",
+      bool isCut = false,
+      bool isDisconnect = false,
+      bool isDevicePOS = false,
+      int timeout = 30}) {
     return FlutterSavanitdevPrinterPlatform.instance.printCommand(
-      address: address,
-      iniCommand: iniCommand,
-      cutterCommands: cutterCommands,
-      img: img,
-      encode: encode,
-      isCut: isCut,
-      isDisconnect: isDisconnect,
-      isDevicePOS: isDevicePOS,
-    );
+        address: address,
+        iniCommand: iniCommand,
+        cutterCommands: cutterCommands,
+        img: img,
+        encode: encode,
+        isCut: isCut,
+        isDisconnect: isDisconnect,
+        isDevicePOS: isDevicePOS,
+        timeout: timeout);
   }
 
   Future<String?> connectMultiXPrinter(String address, String type) {
