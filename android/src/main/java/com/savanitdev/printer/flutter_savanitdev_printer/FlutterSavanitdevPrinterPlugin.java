@@ -271,24 +271,34 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
 
     @Override
     public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
-        activityBinding = binding;
-        activityBinding.getActivity();
-        activity = binding.getActivity();
-        // Register for activity result
-           binding.addActivityResultListener(
-                   (requestCode, resultCode, data) -> {
-//                       Toast.makeText(context, "Test systems", Toast.LENGTH_SHORT).show();
-                           if (pendingResult != null && resultCode == Activity.RESULT_OK) {
+        new Thread(() -> {
+           try{
+               activityBinding = binding;
+               activityBinding.getActivity();
+               activity = binding.getActivity();
+               // Register for activity result
+               binding.addActivityResultListener(
+                       (requestCode, resultCode, data) -> {
+                           if(pendingResult != null){
+                           if (resultCode == Activity.RESULT_OK) {
                                BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-                                bluetoothDiscovery(bluetoothAdapter, activity, pendingResult);
-                                pendingResult = null;
-                                return true;
+                               bluetoothDiscovery(bluetoothAdapter, activity, pendingResult);
+                               pendingResult = null;
+                               return true;
                            }
-                       assert pendingResult != null;
-                       pendingResult.success(new ArrayList<>());
-                       return false;
-                   }
-           );
+                               pendingResult.success(new ArrayList<>());
+                               pendingResult = null;
+                           }
+                           return false;
+                       }
+               );
+           }catch (Exception e){
+               if(pendingResult != null){
+                   pendingResult.error("ERROR", e.toString(), "");
+                   pendingResult = null;
+               }
+           }
+        });
     }
 
     @Override
@@ -311,7 +321,6 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
     }
     @Override
     public boolean onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-
         if (requestCode == REQUEST_COARSE_LOCATION_PERMISSIONS) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 getBondedDevices(pendingResult);

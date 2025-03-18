@@ -54,7 +54,7 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-       
+        DispatchQueue.global(qos: .userInitiated).async {
             self.resultMethod = result
             self.hasResultBeenCalled = false
             
@@ -62,7 +62,7 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
                 self.callResult(false)
                 return
             }
-
+            
             switch call.method {
             case "connect":
                 guard let address = args["address"] as? String,
@@ -81,7 +81,7 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
                 
             case "printCommand":
                 guard let address = args["address"] as? String
-                     else {
+                else {
                     self.callResult(false)
                     return
                 }
@@ -89,12 +89,12 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
                 let img = args["img"] as! String
                 let iniCommand = args["iniCommand"] as! String
                 let cutterCommands = args["cutterCommands"] as! String
-                 let isCut = args["isCut"] as? Bool
-                 let isDisconnect = args["isDisconnect"] as? Bool
-                 let isDevicePOS = args["isDevicePOS"] as? Bool
-
+                let isCut = args["isCut"] as? Bool
+                let isDisconnect = args["isDisconnect"] as? Bool
+                let isDevicePOS = args["isDevicePOS"] as? Bool
+                
                 self.printCommand(address, iniCommand: iniCommand, cutterCommands: cutterCommands, encode: encode, img: img, isCut: isCut!, isDisconnect: isDisconnect!, isDevicePOS: isDevicePOS!)
-
+                
             case "printRawDataESC":
                 guard let address = args["address"] as? String,
                       let encode = args["encode"] as? String else {
@@ -111,12 +111,21 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
                 }
                 self.printImgESCX(address, base64String: encode, width: args["width"] as? Int ?? 0)
                 
-            case "getListDevice":
-                self.getListDevice(result)
+            case "discovery":
+                guard let type = args["type"] as? String else {
+                    result([])
+                    return
+                }
+                if(type == "bluetooth"){
+                    self.discovery(result)
+                }else{
+                    result([])
+                    return
+                }
             default:
                 self.callResult(false)
             }
-    
+        }
     }
     
     // Helper to ensure resultMethod is called only once
@@ -387,7 +396,7 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     }
     
     @objc
-    func statusBTXprinter(printer: POSBLEManager) {
+    func statusBTXprinter() {
         btManager.printerStatus { [weak self] (responseData: Data?) in
             DispatchQueue.main.async {
                 guard let data = responseData, data.count == 1, let status = [UInt8](data).first else {
@@ -395,7 +404,7 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
                     self?.btManager.disconnectRootPeripheral()
                     return
                 }
-                self?.callResult(status == 0x12) // Only 0x12 is success
+                self?.callResult(status == 0) // Ready 0 is success
                 if(self?.isDisconnectPrinter == true){
                     self?.btManager.disconnectRootPeripheral()
                 }
@@ -405,12 +414,12 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     }
     
     @objc
-    func getListDevice(_ result: @escaping FlutterResult) {
+    func discovery(_ result: @escaping FlutterResult) {
         if(self.statusBLE == true){
              if dataArr.count > 0 {
-                 var arr: [[String: Any]] = []
+                 var arr: [[String: String]] = []
                  for peripheral in dataArr {
-                     let peripheralDict: [String: Any] = [
+                     let peripheralDict: [String: String] = [
                          "address": peripheral.identifier.uuidString,
                          "name": peripheral.name ?? "Unknown"
                      ]
@@ -469,8 +478,7 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
                 self.callResult(false)
                 return
             }
-            self.callResult(true)
-            self.btManager.disconnectRootPeripheral()
+            self.statusBTXprinter();
         }
     }
     
