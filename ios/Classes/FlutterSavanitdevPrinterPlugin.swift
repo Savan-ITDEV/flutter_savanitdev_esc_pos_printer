@@ -34,6 +34,7 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     var btManager: POSBLEManager!
     var statusBLE: Bool = false
     var isDisconnectPrinter: Bool = false
+    var isConnectPrinter: Bool = false
     var setPrinter = Data()
     let printerManager = PrinterManager()
     private var resultMethod: FlutterResult?
@@ -44,6 +45,8 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
         self.centralManager = CBCentralManager(delegate: self, queue: nil)
         self.btManager = POSBLEManager.sharedInstance()
         self.btManager.delegate = self
+        btManager.disconnectRootPeripheral();
+        self.isConnectPrinter = false
     }
     
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -202,14 +205,16 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
             callResult(false)
             return
         }
+        self.btManager.startScan()
         if let peripheral = dataArr.first(where: { $0.identifier.uuidString == identifiers }) {
-            if addressCurrent == peripheral.identifier.uuidString {
+            if (addressCurrent == peripheral.identifier.uuidString && self.isConnectPrinter == true) {
                 callResult(true)
             } else {
-                btManager.connectDevice(peripheral)
+                self.btManager.connectDevice(peripheral)
+               
             }
         } else {
-            btManager.startScan()
+           
             callResult(false)
         }
     }
@@ -369,6 +374,8 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
             return
         }
         btManager.writeCommand(with: data)
+        sleep(1)
+        self.statusBTXprinter();
     }
     
     @objc
@@ -398,18 +405,17 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     @objc
     func statusBTXprinter() {
         btManager.printerStatus { [weak self] (responseData: Data?) in
-            DispatchQueue.main.async {
-                guard let data = responseData, data.count == 1, let status = [UInt8](data).first else {
+                guard let data = responseData, let byte = [UInt8](data).first, byte == 0 || byte == 18 else {
                     self?.callResult(false)
-                    self?.btManager.disconnectRootPeripheral()
                     return
                 }
-                self?.callResult(status == 0) // Ready 0 is success
-                if(self?.isDisconnectPrinter == true){
-                    self?.btManager.disconnectRootPeripheral()
-                }
-                self?.isDisconnectPrinter = false
-            }
+                print("status ===> \(byte.description)")
+              
+            if(self?.isDisconnectPrinter == true){
+             self?.btManager.disconnectRootPeripheral()
+              }
+             self?.isDisconnectPrinter = false
+            
         }
     }
     
@@ -439,10 +445,12 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     
     // MARK: - Bluetooth Delegate Methods
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        print("centralManagerDidUpdateState ")
         statusBLE = central.state == .poweredOn
     }
     
     public func poSbleUpdatePeripheralList(_ peripherals: [Any]!, rssiList: [Any]!) {
+        print("poSbleUpdatePeripheralList ")
         if let peripherals = peripherals as? [CBPeripheral], let rssiList = rssiList as? [NSNumber] {
             self.dataArr = peripherals
             self.rssiList = rssiList
@@ -450,44 +458,61 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     }
     
     public func poSbleConnect(_ peripheral: CBPeripheral!) {
-        DispatchQueue.main.async { [weak self] in
-            self?.addressCurrent = peripheral.identifier.uuidString
-            self?.callResult(true)
-        }
+            print("poSbleConnect")
+            self.addressCurrent = peripheral.identifier.uuidString
+            self.callResult(true)
+            self.isConnectPrinter = true
+    
     }
     
     public func poSbleFail(toConnect peripheral: CBPeripheral!, error: (any Error)!) {
+        print("poSbleFail \(String(describing: error))")
         DispatchQueue.main.async { [weak self] in
             self?.callResult(false)
+            self?.isConnectPrinter = false
         }
     }
     
     public func poSbleDisconnectPeripheral(_ peripheral: CBPeripheral!, error: (any Error)!) {
+        print("poSbleDisconnectPeripheral  \(String(describing: error))")
         DispatchQueue.main.async { [weak self] in
-            self?.addressCurrent = ""
+//            self?.addressCurrent = ""
 //            self?.btManager.startScan()
             self?.btManager.disconnectRootPeripheral()
-            self?.isDisconnectPrinter = false
+            self?.isConnectPrinter = false
             self?.callResult(true)
         }
     }
     
     public func poSbleWriteValue(for character: CBCharacteristic!, error: (any Error)!) {
-        DispatchQueue.main.async {
+        print("poSbleWriteValue  \(String(describing: error))")
             guard error == nil, character != nil else {
                 self.callResult(false)
                 return
             }
-            self.statusBTXprinter();
-        }
+//        self.callResult(true)
+        
     }
     
     public func poSbleReceiveValue(for characteristic: CBCharacteristic!, error: (any Error)!) {
         // No action needed
+        print("poSbleReceiveValue  \(String(describing: error))")
+        print("poSbleReceiveValue  \(String(describing: characteristic.description))")
+            guard error == nil, characteristic != nil else {
+                self.callResult(false)
+                return
+            }
+        self.callResult(true)
     }
     
     public func poSbleCentralManagerDidUpdateState(_ state: Int) {
-        btManager.startScan()
+        print("poSbleCentralManagerDidUpdateState \(state.description)")
+        self.isConnectPrinter = false
+        self.dataArr.removeAll()
+        self.dataArr = []
+        self.btManager.disconnectRootPeripheral()
+        self.btManager.startScan()
+        
     }
     
     // MARK: - Utility Functions
