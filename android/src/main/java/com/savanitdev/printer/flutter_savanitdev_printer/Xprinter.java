@@ -648,7 +648,7 @@ public class Xprinter {
             resultStatus.setResult(result,false);
         }
     }
-    public void print(String address,String iniCommand,String cutterCommands, String encode,String img,boolean isCut,boolean isDisconnect, boolean isDevicePOS, @NonNull MethodChannel.Result result) {
+    public void print(String address,String iniCommand,String cutterCommands, String encode,String img,boolean isCut,boolean isDisconnect, boolean isDevicePOS,Integer width, @NonNull MethodChannel.Result result) {
             try {
                 IDeviceConnection connection = connections.get(address);
                 if (connection == null) {
@@ -667,7 +667,7 @@ public class Xprinter {
                         if (!img.isEmpty()) {
                             Bitmap bmp = decodeBase64ToBitmap(img);
                             final Bitmap bitmapToPrint = convertGreyImg(bmp);
-                            printer.printBitmap(bitmapToPrint, POSConst.ALIGNMENT_CENTER, 576);
+                            printer.printBitmap(bitmapToPrint, POSConst.ALIGNMENT_CENTER, width);
                         }
                         if (!encode.isEmpty()) {
                             printer.sendData(encodeBytes);

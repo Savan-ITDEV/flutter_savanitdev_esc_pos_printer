@@ -38,7 +38,8 @@ class MockFlutterSavanitdevPrinterPlatform
       bool isCut = false,
       bool isDisconnect = false,
       bool isDevicePOS = false,
-      int timeout = 30}) {
+      int timeout = 30,
+      int width = 576}) {
     // TODO: implement printCommand
     throw UnimplementedError();
   }

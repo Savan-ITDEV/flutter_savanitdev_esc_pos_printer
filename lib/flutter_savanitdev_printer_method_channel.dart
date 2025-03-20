@@ -4,7 +4,8 @@ import 'dart:async';
 import 'flutter_savanitdev_printer_platform_interface.dart';
 
 /// An implementation of [FlutterSavanitdevPrinterPlatform] that uses method channels.
-class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlatform {
+class MethodChannelFlutterSavanitdevPrinter
+    extends FlutterSavanitdevPrinterPlatform {
   /// The method channel used to interact with the native platform.
   @visibleForTesting
   final methodChannel = const MethodChannel('flutter_savanitdev_printer');
@@ -50,9 +51,11 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
   }
 
   @override
-  Future<bool> connect(String address, String type, bool isCloseConnection, int timeout) async {
+  Future<bool> connect(
+      String address, String type, bool isCloseConnection, int timeout) async {
     try {
-      final version = await methodChannel.invokeMethod('connect', <String, dynamic>{
+      final version =
+          await methodChannel.invokeMethod('connect', <String, dynamic>{
         'address': address,
         'type': type,
         'isCloseConnection': isCloseConnection,
@@ -73,10 +76,12 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
   @override
   Future<bool> disconnect(String address, int timeout) async {
     try {
-      final version = await methodChannel.invokeMethod('disconnect', <String, dynamic>{'address': address}).timeout(
+      final version = await methodChannel.invokeMethod(
+          'disconnect', <String, dynamic>{'address': address}).timeout(
         Duration(seconds: timeout ?? 30), // กำหนด Timeout 5 นาที
         onTimeout: () {
-          throw TimeoutException("Method disconnect timed out after 5 minutes.");
+          throw TimeoutException(
+              "Method disconnect timed out after 5 minutes.");
         },
       );
       return version;
@@ -88,16 +93,18 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
   }
 
   @override
-  Future<bool> printCommand(
-      {String address = "",
-      String iniCommand = "",
-      String cutterCommands = "",
-      String img = "",
-      String encode = "",
-      bool isCut = false,
-      bool isDisconnect = false,
-      bool isDevicePOS = false,
-      int timeout = 30}) async {
+  Future<bool> printCommand({
+    String address = "",
+    String iniCommand = "",
+    String cutterCommands = "",
+    String img = "",
+    String encode = "",
+    bool isCut = false,
+    bool isDisconnect = false,
+    bool isDevicePOS = false,
+    int timeout = 30,
+    int width = 576,
+  }) async {
     try {
       final version = await methodChannel.invokeMethod('printCommand', {
         'address': address,
@@ -108,10 +115,12 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
         'isCut': isCut,
         'isDisconnect': isDisconnect,
         'isDevicePOS': isDevicePOS,
+        'width': width,
       }).timeout(
         Duration(seconds: timeout), // กำหนด Timeout 30
         onTimeout: () {
-          throw TimeoutException("Method disconnect timed out after 5 minutes.");
+          throw TimeoutException(
+              "Method disconnect timed out after 5 minutes.");
         },
       );
       return version;
@@ -124,7 +133,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> connectMultiXPrinter(String address, String type) async {
-    final version = await methodChannel.invokeMethod<String>('connectMultiXPrinter', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('connectMultiXPrinter', <String, dynamic>{
       'address': address,
       'type': type,
     });
@@ -133,7 +143,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> disconnectXPrinter(String address) async {
-    final version = await methodChannel.invokeMethod<String>('disconnectXPrinter', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('disconnectXPrinter', <String, dynamic>{
       'address': address,
     });
     return version;
@@ -141,15 +152,18 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> removeConnection(String address) async {
-    final version = await methodChannel.invokeMethod<String>('removeConnection', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('removeConnection', <String, dynamic>{
       'address': address,
     });
     return version;
   }
 
   @override
-  Future<String?> printRawDataESC(String address, String encode, bool isDevicePOS) async {
-    final version = await methodChannel.invokeMethod<String>('printRawDataESC', <String, dynamic>{
+  Future<String?> printRawDataESC(
+      String address, String encode, bool isDevicePOS) async {
+    final version = await methodChannel
+        .invokeMethod<String>('printRawDataESC', <String, dynamic>{
       'address': address,
       'encode': encode,
       'isDevicePOS': isDevicePOS,
@@ -158,8 +172,10 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
   }
 
   @override
-  Future<String?> printImgESCX(String address, String encode, int countCut, int width, bool isDevicePOS) async {
-    final version = await methodChannel.invokeMethod<String>('printImgESCX', <String, dynamic>{
+  Future<String?> printImgESCX(String address, String encode, int countCut,
+      int width, bool isDevicePOS) async {
+    final version = await methodChannel
+        .invokeMethod<String>('printImgESCX', <String, dynamic>{
       'address': address,
       'encode': encode,
       'width': width,
@@ -171,7 +187,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> cutESCX(String address) async {
-    final version = await methodChannel.invokeMethod<String>('cutESCX', <String, dynamic>{
+    final version =
+        await methodChannel.invokeMethod<String>('cutESCX', <String, dynamic>{
       'address': address,
     });
     return version;
@@ -179,7 +196,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> pingDevice(String address, int timeout) async {
-    final version = await methodChannel.invokeMethod<String>('pingDevice', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('pingDevice', <String, dynamic>{
       'address': address,
       'timeout': timeout,
     });
@@ -188,7 +206,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> startQuickDiscovery(int timeout) async {
-    final version = await methodChannel.invokeMethod<String>('startQuickDiscovery', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('startQuickDiscovery', <String, dynamic>{
       'timeout': timeout,
     });
     return version;
@@ -201,8 +220,10 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
   }
 
   @override
-  Future<String?> printImgZPL(String address, String encode, int printCount, int width, int x, int y) async {
-    final version = await methodChannel.invokeMethod<String>('printImgZPL', <String, dynamic>{
+  Future<String?> printImgZPL(String address, String encode, int printCount,
+      int width, int x, int y) async {
+    final version = await methodChannel
+        .invokeMethod<String>('printImgZPL', <String, dynamic>{
       'address': address,
       'encode': encode,
       'printCount': printCount,
@@ -214,8 +235,10 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
   }
 
   @override
-  Future<String?> printImgCPCL(String address, String encode, int width, int x, int y) async {
-    final version = await methodChannel.invokeMethod<String>('printImgCPCL', <String, dynamic>{
+  Future<String?> printImgCPCL(
+      String address, String encode, int width, int x, int y) async {
+    final version = await methodChannel
+        .invokeMethod<String>('printImgCPCL', <String, dynamic>{
       'address': address,
       'encode': encode,
       'width': width,
@@ -237,7 +260,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
     int x,
     int y,
   ) async {
-    final version = await methodChannel.invokeMethod<String>('printImgTSPL', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('printImgTSPL', <String, dynamic>{
       'address': address,
       'encode': encode,
       'width': width,
@@ -253,7 +277,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> setPrintSpeed(String address, int speed) async {
-    final version = await methodChannel.invokeMethod<String>('setPrintSpeed', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('setPrintSpeed', <String, dynamic>{
       'address': address,
       'speed': speed,
     });
@@ -261,8 +286,10 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
   }
 
   @override
-  Future<String?> setPrintOrientation(String address, String orientation) async {
-    final version = await methodChannel.invokeMethod<String>('setPrintOrientation', <String, dynamic>{
+  Future<String?> setPrintOrientation(
+      String address, String orientation) async {
+    final version = await methodChannel
+        .invokeMethod<String>('setPrintOrientation', <String, dynamic>{
       'address': address,
       'orientation': orientation,
     });
@@ -271,7 +298,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> printRawDataCPCL(String address, String encode) async {
-    final version = await methodChannel.invokeMethod<String>('printRawDataCPCL', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('printRawDataCPCL', <String, dynamic>{
       'address': address,
       'encode': encode,
     });
@@ -280,7 +308,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> printRawDataTSPL(String address, String encode) async {
-    final version = await methodChannel.invokeMethod<String>('printRawDataTSPL', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('printRawDataTSPL', <String, dynamic>{
       'address': address,
       'encode': encode,
     });
@@ -289,7 +318,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> setPrintDensity(String address, String density) async {
-    final version = await methodChannel.invokeMethod<String>('setPrintDensity', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('setPrintDensity', <String, dynamic>{
       'address': address,
       'density': density,
     });
@@ -298,7 +328,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> printerStatusZPL(String address, int timeout) async {
-    final version = await methodChannel.invokeMethod<String>('printerStatusZPL', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('printerStatusZPL', <String, dynamic>{
       'address': address,
       'timeout': timeout,
     });
@@ -318,7 +349,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> connectZyWell(String address, String type) async {
-    final version = await methodChannel.invokeMethod<String>('connectZyWell', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('connectZyWell', <String, dynamic>{
       'address': address,
       'type': type,
     });
@@ -327,7 +359,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> disconnectZyWell(String address) async {
-    final version = await methodChannel.invokeMethod<String>('disconnectZyWell', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('disconnectZyWell', <String, dynamic>{
       'address': address,
     });
     return version;
@@ -335,7 +368,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> getPrinterStatusZyWell(String address) async {
-    final version = await methodChannel.invokeMethod<String>('getPrinterStatusZyWell', <String, dynamic>{
+    final version = await methodChannel
+        .invokeMethod<String>('getPrinterStatusZyWell', <String, dynamic>{
       'address': address,
     });
     return version;
@@ -343,7 +377,8 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
 
   @override
   Future<String?> printRawZyWell(String address, String encode) async {
-    final version = await methodChannel.invokeMethod('printRawZyWell', <dynamic, dynamic>{
+    final version =
+        await methodChannel.invokeMethod('printRawZyWell', <dynamic, dynamic>{
       'address': address,
       'encode': encode,
     });
@@ -351,8 +386,10 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
   }
 
   @override
-  Future<String?> printImgZyWell(String address, String encode, bool isCut, int width, int cutCount) async {
-    final version = await methodChannel.invokeMethod('printImgZyWell', <dynamic, dynamic>{
+  Future<String?> printImgZyWell(String address, String encode, bool isCut,
+      int width, int cutCount) async {
+    final version =
+        await methodChannel.invokeMethod('printImgZyWell', <dynamic, dynamic>{
       'address': address,
       'encode': encode,
       'isCut': isCut,
@@ -376,73 +413,85 @@ class MethodChannelFlutterSavanitdevPrinter extends FlutterSavanitdevPrinterPlat
     if (align == "left") {
       num = 0;
     }
-    final version = await methodChannel.invokeMethod('selectAlignment', {'n': num});
+    final version =
+        await methodChannel.invokeMethod('selectAlignment', {'n': num});
     return version;
   }
 
   @override
   Future<List<int>> selectCharacterSize(int n) async {
-    final version = await methodChannel.invokeMethod('selectCharacterSize', {'n': n});
+    final version =
+        await methodChannel.invokeMethod('selectCharacterSize', {'n': n});
     return version;
   }
 
   @override
   Future<List<int>> selectOrCancelBoldModel(int n) async {
-    final version = await methodChannel.invokeMethod('selectOrCancelBoldModel', {'n': n});
+    final version =
+        await methodChannel.invokeMethod('selectOrCancelBoldModel', {'n': n});
     return version;
   }
 
   @override
   Future<List<int>> selectCharacterCodePage(int n) async {
-    final version = await methodChannel.invokeMethod('selectCharacterCodePage', {'n': n});
+    final version =
+        await methodChannel.invokeMethod('selectCharacterCodePage', {'n': n});
     return version;
   }
 
   @override
   Future<List<int>> setBarcodeWidth(int n) async {
-    final version = await methodChannel.invokeMethod('setBarcodeWidth', {'n': n});
+    final version =
+        await methodChannel.invokeMethod('setBarcodeWidth', {'n': n});
     return version;
   }
 
   @override
   Future<List<int>> setBarcodeHeight(int n) async {
-    final version = await methodChannel.invokeMethod('setBarcodeHeight', {'n': n});
+    final version =
+        await methodChannel.invokeMethod('setBarcodeHeight', {'n': n});
     return version;
   }
 
   @override
   Future<List<int>> selectHRICharacterPrintPosition(int n) async {
-    final version = await methodChannel.invokeMethod('selectHRICharacterPrintPosition', {'n': n});
+    final version = await methodChannel
+        .invokeMethod('selectHRICharacterPrintPosition', {'n': n});
     return version;
   }
 
   @override
   Future<List<int>> selectInternationalCharacterSets(int n) async {
-    final version = await methodChannel.invokeMethod('selectInternationalCharacterSets', {'n': n});
+    final version = await methodChannel
+        .invokeMethod('selectInternationalCharacterSets', {'n': n});
     return version;
   }
 
   @override
   Future<List<int>> printBarcode(int m, int n, String content) async {
-    final version = await methodChannel.invokeMethod('printBarcode', {'m': m, 'n': n, 'content': content});
+    final version = await methodChannel
+        .invokeMethod('printBarcode', {'m': m, 'n': n, 'content': content});
     return version;
   }
 
   @override
   Future<List<int>> setAbsolutePrintPosition(int m, int n) async {
-    final version = await methodChannel.invokeMethod('setAbsolutePrintPosition', {'m': m, 'n': n});
+    final version = await methodChannel
+        .invokeMethod('setAbsolutePrintPosition', {'m': m, 'n': n});
     return version;
   }
 
   @override
   Future<List<int>> text(String text, String codePage) async {
-    final version = await methodChannel.invokeMethod('text', {'text': text, 'codePage': codePage ?? "cp874"});
+    final version = await methodChannel
+        .invokeMethod('text', {'text': text, 'codePage': codePage ?? "cp874"});
     return version;
   }
 
   @override
   Future<List<int>> printQRcode(int n, int errLevel, String content) async {
-    final version = await methodChannel.invokeMethod('printQRcode', {'n': n, 'errLevel': errLevel, 'content': content});
+    final version = await methodChannel.invokeMethod(
+        'printQRcode', {'n': n, 'errLevel': errLevel, 'content': content});
     return version;
   }
 

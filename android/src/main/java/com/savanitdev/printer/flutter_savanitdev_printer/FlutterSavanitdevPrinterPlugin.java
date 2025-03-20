@@ -102,15 +102,16 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
                 String iniCommand = call.argument("iniCommand");
                 String cutterCommands = call.argument("cutterCommands");
                 String img = call.argument("img");
+                Integer width = call.argument("width");
                 String encode = call.argument("encode");
                 boolean isCut = Boolean.TRUE.equals(call.argument("isCut"));
                 boolean isDisconnect = Boolean.TRUE.equals(call.argument("isDisconnect"));
                 boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
-                if (address == null || iniCommand == null || cutterCommands == null || img == null || encode == null) {
+                if (address == null || iniCommand == null || cutterCommands == null || img == null || encode == null || width == null) {
                     result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
                     return;
                 }
-                xprinter.print(address,iniCommand,cutterCommands,encode,img,isCut,isDisconnect,isDevicePOS, result);
+                xprinter.print(address,iniCommand,cutterCommands,encode,img,isCut,isDisconnect,isDevicePOS,width, result);
             }
 
             //  ================>      Xprinter libray method        <================    //
