@@ -73,13 +73,13 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
     ExecutorService executor = Executors.newSingleThreadExecutor();
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-        executor.execute(() -> {
         switch (call.method) {
             case "getPlatformVersion" -> {
                 result.success("Android " + Build.VERSION.RELEASE);
             }
             //  ================>      Xprinter function species printer        <================    //
             case "connect" -> {
+                executor.execute(() -> {
                 String address = call.argument("address");
                 boolean isCloseConnection = Boolean.TRUE.equals(call.argument("isCloseConnection"));
                 String type = call.argument("type");
@@ -88,30 +88,35 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
                     return;
                 }
                 xprinter.connect(address, type,isCloseConnection, result);
+                });
             }
             case "disconnect" -> {
+                executor.execute(() -> {
                 String address = call.argument("address");
                 if (address == null) {
                     result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
                     return;
                 }
                 xprinter.disconnect(address, result);
+                });
             }
             case "printCommand" -> {
-                String address = call.argument("address");
-                String iniCommand = call.argument("iniCommand");
-                String cutterCommands = call.argument("cutterCommands");
-                String img = call.argument("img");
-                Integer width = call.argument("width");
-                String encode = call.argument("encode");
-                boolean isCut = Boolean.TRUE.equals(call.argument("isCut"));
-                boolean isDisconnect = Boolean.TRUE.equals(call.argument("isDisconnect"));
-                boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
-                if (address == null || iniCommand == null || cutterCommands == null || img == null || encode == null || width == null) {
-                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
-                    return;
-                }
-                xprinter.print(address,iniCommand,cutterCommands,encode,img,isCut,isDisconnect,isDevicePOS,width, result);
+                executor.execute(() -> {
+                    String address = call.argument("address");
+                    String iniCommand = call.argument("iniCommand");
+                    String cutterCommands = call.argument("cutterCommands");
+                    String img = call.argument("img");
+                    Integer width = call.argument("width");
+                    String encode = call.argument("encode");
+                    boolean isCut = Boolean.TRUE.equals(call.argument("isCut"));
+                    boolean isDisconnect = Boolean.TRUE.equals(call.argument("isDisconnect"));
+                    boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
+                    if (address == null || iniCommand == null || cutterCommands == null || img == null || encode == null || width == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    xprinter.print(address, iniCommand, cutterCommands, encode, img, isCut, isDisconnect, isDevicePOS, width, result);
+                });
             }
 
             //  ================>      Xprinter libray method        <================    //
@@ -166,9 +171,11 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
                 USBDiscovery(result);
             }
             case "getUSBAddress" -> {
-                Integer productId = call.argument("productId");
-                Integer vendorId = call.argument("vendorId");
-                USBAdapter.getUSBAddress(context,productId,vendorId,result);
+                executor.execute(() -> {
+                    Integer productId = call.argument("productId");
+                    Integer vendorId = call.argument("vendorId");
+                    USBAdapter.getUSBAddress(context, productId, vendorId, result);
+                });
             }
 
             case "tryGetUsbPermission" ->{
@@ -184,18 +191,20 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
                 }
             }
             case "discovery" -> {
-                String type = call.argument("type");
-                Integer timeout = call.argument("timeout");
-                if (type == null || timeout == null) {
-                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
-                    return;
-                }
-                discovery(type,timeout, result);
+                executor.execute(() -> {
+                    String type = call.argument("type");
+                    Integer timeout = call.argument("timeout");
+                    if (type == null || timeout == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    discovery(type, timeout, result);
+                });
             }
 
             default -> result.notImplemented();
         }
-        });
+
     }
     public boolean hasBluetoothScan() {
         boolean hasBluetoothScan = ActivityCompat.checkSelfPermission(activity,
