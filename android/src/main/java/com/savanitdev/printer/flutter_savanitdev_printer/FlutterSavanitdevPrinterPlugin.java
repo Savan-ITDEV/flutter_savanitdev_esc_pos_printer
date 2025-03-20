@@ -272,8 +272,7 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
 
     @Override
     public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
-        new Thread(() -> {
-           try{
+       try{
                activityBinding = binding;
                activityBinding.getActivity();
                activity = binding.getActivity();
@@ -299,7 +298,6 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
                    pendingResult = null;
                }
            }
-        });
     }
 
     @Override
