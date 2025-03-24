@@ -675,8 +675,8 @@ public class Xprinter {
     public void printWithBufferCheck(POSPrinter printer, @NonNull MethodChannel.Result result) {
         executor.submit(() -> {
         try {
-            printer.printString("                       "); // ส่งคำสั่งพิมพ์
-            printer.feedLine(0); // บังคับให้ Buffer ทำงานทันที
+            byte[] command = { 0x1B, 0x40 }; // ESC @ (initialize)
+            printer.sendData(command).feedLine(0);
             System.out.println("status printing success");
             resultStatus.setResult(result,true);
         } catch (Exception e) {
@@ -716,7 +716,7 @@ public class Xprinter {
                             resultStatus.setResultErrorMethod(result,StatusPrinter.STS_PRINTER_ERR);
                             break;
                         default:
-                                resultStatus.setResult(result,true);
+                            resultStatus.setResult(result,true);
                             break;
                     }
                 });
