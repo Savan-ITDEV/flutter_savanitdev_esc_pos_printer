@@ -700,9 +700,6 @@ public class Xprinter {
                     }
                     rety = 0;
                     switch (status) {
-                        case 0:
-                            resultStatus.setResult(result,true);
-                            break;
                         case 8:
                             resultStatus.setResultErrorMethod(result,StatusPrinter.STS_COVEROPEN);
                             break;
@@ -716,7 +713,7 @@ public class Xprinter {
                             resultStatus.setResultErrorMethod(result,StatusPrinter.STS_PRINTER_ERR);
                             break;
                         default:
-                            resultStatus.setResult(result,true);
+                                resultStatus.setResult(result,true);
                             break;
                     }
                 });
