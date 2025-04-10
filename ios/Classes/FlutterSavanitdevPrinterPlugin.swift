@@ -24,8 +24,9 @@ class PrinterManager {
     }
 }
 
-public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, WIFIConnecterDelegate, CBCentralManagerDelegate, POSBLEManagerDelegate, FlutterPlugin {
-    
+public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, WIFIConnecterDelegate, CBCentralManagerDelegate, FlutterPlugin, POSBLEManagerDelegate {
+
+
     var rssiList: [NSNumber] = []
     var dataArr: [CBPeripheral] = []
     var startTime: Date?
@@ -37,6 +38,7 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     var isConnectPrinter: Bool = false
     var setPrinter = Data()
     let printerManager = PrinterManager()
+    var retryCount = 0
     private var resultMethod: FlutterResult?
     private var hasResultBeenCalled = false // To prevent multiple calls
     
@@ -45,7 +47,7 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
         self.centralManager = CBCentralManager(delegate: self, queue: nil)
         self.btManager = POSBLEManager.sharedInstance()
         self.btManager.delegate = self
-        btManager.disconnectRootPeripheral();
+//        self.btManager.disconnectRootPeripheral();
         self.isConnectPrinter = false
     }
     
@@ -98,22 +100,6 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
                 
                 self.printCommand(address, iniCommand: iniCommand, cutterCommands: cutterCommands, encode: encode, img: img, isCut: isCut!, isDisconnect: isDisconnect!, isDevicePOS: isDevicePOS!)
                 
-            case "printRawDataESC":
-                guard let address = args["address"] as? String,
-                      let encode = args["encode"] as? String else {
-                    self.callResult(false)
-                    return
-                }
-                self.printRawDataESC(address, base64String: encode)
-                
-            case "printImgESCX":
-                guard let address = args["address"] as? String,
-                      let encode = args["encode"] as? String else {
-                    self.callResult(false)
-                    return
-                }
-                self.printImgESCX(address, base64String: encode, width: args["width"] as? Int ?? 0)
-                
             case "discovery":
                 guard let type = args["type"] as? String else {
                     result([])
@@ -142,26 +128,26 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     // MARK: - WIFIConnecterDelegate Methods
     public func wifiPOSConnected(toHost ip: String, port: UInt16, mac: String) {
         print("WiFi printer connected - IP: \(ip), Port: \(port), MAC: \(mac)")
-            self.callResult(true)
+        self.callResult(true)
     }
     
     public func wifiPOSDisconnectWithError(_ error: Error?, mac: String, ip: String) {
         print("WiFi printer disconnected - IP: \(ip), MAC: \(mac)")
-            if let printer = printerManager.getPrinter(id: ip) {
-                printer.disconnect()
-                isDisconnectPrinter = false
-                printerManager.removePrinter(id: ip)
-            }
-            self.callResult(false)
+        if let printer = printerManager.getPrinter(id: ip) {
+            printer.disconnect()
+            isDisconnectPrinter = false
+            printerManager.removePrinter(id: ip)
+        }
+        self.callResult(false)
     }
     
     public func wifiPOSWriteValue(withTag tag: Int, mac: String, ip: String) {
-    
+        
         guard self.printerManager.getPrinter(id: ip) != nil else {
-                self.callResult(false)
-                return
-            }
-            self.statusXprinter(address: ip)
+            self.callResult(false)
+            return
+        }
+        self.statusXprinter(address: ip)
         
     }
     
@@ -205,16 +191,14 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
             callResult(false)
             return
         }
-        self.btManager.startScan()
+//        self.btManager.startScan()
         if let peripheral = dataArr.first(where: { $0.identifier.uuidString == identifiers }) {
             if (addressCurrent == peripheral.identifier.uuidString && self.isConnectPrinter == true) {
                 callResult(true)
             } else {
                 self.btManager.connectDevice(peripheral)
-               
             }
         } else {
-           
             callResult(false)
         }
     }
@@ -238,7 +222,7 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
             callResult(false)
             return
         }
-        if btManager.printerIsConnect() {
+        if btManager.isConnecting {
             btManager.disconnectRootPeripheral()
         } else {
             callResult(true)
@@ -257,15 +241,19 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     
     @objc
     func printCommand(_ address: String, iniCommand: String, cutterCommands: String,
-    encode: String, img: String, isCut: Bool, isDisconnect: Bool, isDevicePOS: Bool) {
+                      encode: String, img: String, isCut: Bool, isDisconnect: Bool, isDevicePOS: Bool) {
         if(address.isEmpty){
             callResult(false)
             return
         }
-        
         var concatenatedData = Data([0x1d, 0x72, 0x01])
-        concatenatedData.append(POSCommand.initializePrinter())
-        concatenatedData.append(POSCommand.selectAlignment(1))
+        if isValidIPAddress(address) {
+            concatenatedData.append(POSCommand.initializePrinter())
+            concatenatedData.append(POSCommand.selectAlignment(1))
+        }else{
+            concatenatedData.append(PosCommand2.initializePrinter())
+            concatenatedData.append(PosCommand2.selectAlignment(1))
+        }
         if(!iniCommand.isEmpty){
             concatenatedData.append(Data(base64Encoded: iniCommand)!)
         }
@@ -273,7 +261,11 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
             guard let imageData = Data(base64Encoded: img) else { return callResult(false) }
             guard let image = UIImage(data: imageData) else { return callResult(false)}
             let imgEncode = self.monoImg(image: image, threshold: 0.1)
-            concatenatedData.append(POSCommand.printRasteBmp(withM: RasterNolmorWH, andImage: imgEncode, andType: Dithering))
+            if isValidIPAddress(address) {
+                concatenatedData.append(POSCommand.printRasteBmp(withM: RasterNolmorWH, andImage: imgEncode, andType: Dithering))
+            }else{
+                concatenatedData.append(PosCommand2.printRasteBmp(withM: RasterNolmorWH, andImage: imgEncode, andType: Dithering))
+            }
         }
         if(!encode.isEmpty){
             concatenatedData.append(Data(base64Encoded: encode)!)
@@ -282,78 +274,21 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
             concatenatedData.append(Data(base64Encoded: cutterCommands)!)
         }
         if(isCut && cutterCommands.isEmpty){
-            concatenatedData.append(POSCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1))
+            if isValidIPAddress(address) {
+                concatenatedData.append(POSCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1))
+            }else{
+                concatenatedData.append(PosCommand2.selectCutPageModelAndCutpage(withM: 1, andN: 1))
+            }
         }
         isDisconnectPrinter = isDisconnect;
         concatenatedData.append(Data("    ".utf8))
         concatenatedData.append(Data("    ".utf8))
-        
-//        let concatenatedData = bytes + initializePrinter + align + imgData + cut + spaceH1 + spaceH2
-        
         if isValidIPAddress(address) {
-            printByteNet(address, data: concatenatedData)
+            self.printByteNet(address, data: concatenatedData)
         } else {
-            printByteBLE(concatenatedData)
-        }
-    }
-
-    @objc
-    func printImgESCX(_ address: String, base64String: String, width: Int) {
-        guard !address.isEmpty else {
-            callResult(false)
-                    return
-                }
-               
-                guard !base64String.isEmpty else {
-
-                      callResult(false)
-                    return
-                }
-                
-                guard let imageData = Data(base64Encoded: base64String) else {
-                    callResult(false)
-                    return
-                }
-                guard let image = UIImage(data: imageData) else {
-                    callResult(false)
-                       return
-               }
-                guard let img = self.monoImg(image: image, threshold: 0.1) else {
-                    callResult(false)
-                    return
-                }
-                let bytes = Data([0x1d, 0x72, 0x01])
-                let initializePrinter: Data = POSCommand.initializePrinter()
-                let align: Data = POSCommand.selectAlignment(1)
-                let imgData: Data = POSCommand.printRasteBmp(withM: RasterNolmorWH, andImage: img, andType: Dithering)
-                let cut: Data = POSCommand.selectCutPageModelAndCutpage(withM: 1, andN: 1)
-                let spaceH1 = Data("    ".utf8)
-                let spaceH2 = Data("    ".utf8)
-                let concatenatedData = bytes + initializePrinter  + align + imgData + cut + spaceH1 + spaceH2
-                if isValidIPAddress(address) {
-                    printByteNet(address,data: concatenatedData)
-                }else{
-                    printByteBLE(concatenatedData)
-                }
-    }
-    
-    @objc
-    func printRawDataESC(_ address: String, base64String: String) {
-        guard !address.isEmpty, !base64String.isEmpty,
-              let data = Data(base64Encoded: base64String) else {
-            callResult(false)
-            return
-        }
-        
-        let bytes = Data([0x1d, 0x72, 0x01])
-        let initializePrinter = POSCommand.initializePrinter()
-        guard let align = POSCommand.selectAlignment(1) else { return  callResult(false) }
-        let concatenatedData = bytes + initializePrinter! + align + data
-        
-        if isValidIPAddress(address) {
-            printByteNet(address, data: concatenatedData)
-        } else {
-            printByteBLE(concatenatedData)
+            DispatchQueue.global(qos: .background).async {
+                self.printByteBLE(concatenatedData)
+            }
         }
     }
     
@@ -373,9 +308,11 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
             callResult(false)
             return
         }
+        sleep(2)
+        // Write data to the characteristic
         btManager.writeCommand(with: data)
-        sleep(1)
         self.statusBTXprinter();
+        
     }
     
     @objc
@@ -405,115 +342,115 @@ public class FlutterSavanitdevPrinterPlugin: NSObject, POSWIFIManagerDelegate, W
     @objc
     func statusBTXprinter() {
         btManager.printerStatus { [weak self] (responseData: Data?) in
-                guard let data = responseData, let byte = [UInt8](data).first, byte == 0 || byte == 18 else {
-                    self?.callResult(false)
-                    return
-                }
-                print("status ===> \(byte.description)")
-              
-            if(self?.isDisconnectPrinter == true){
-             self?.btManager.disconnectRootPeripheral()
-              }
-             self?.isDisconnectPrinter = false
-            
-        }
+        
+                       guard let data = responseData, let byte = [UInt8](data).first, byte == 0 || byte == 18 else {
+                           self?.callResult(false)
+                           return
+                       }
+                       print("status ===> \(byte.description)")
+                     
+//                   if(self?.isDisconnectPrinter == true){
+//                    self?.btManager.disconnectRootPeripheral()
+//                     }
+//                    self?.isDisconnectPrinter = false
+                   
+               }
     }
     
     @objc
     func discovery(_ result: @escaping FlutterResult) {
         if(self.statusBLE == true){
-             if dataArr.count > 0 {
-                 var arr: [[String: String]] = []
-                 for peripheral in dataArr {
-                     let peripheralDict: [String: String] = [
-                         "address": peripheral.identifier.uuidString,
-                         "name": peripheral.name ?? "Unknown"
-                     ]
-                     arr.append(peripheralDict)
-                 }
-                 print("found device: \(arr)")
-                 result(arr)
-             } else {
-                 print("not found device")
-                 result([])
-             }
-             }else{
-                 result([])
-             }
-         }
-
+            if dataArr.count > 0 {
+                var arr: [[String: String]] = []
+                for peripheral in dataArr {
+                    let peripheralDict: [String: String] = [
+                        "address": peripheral.identifier.uuidString,
+                        "name": peripheral.name ?? "Unknown"
+                    ]
+                    arr.append(peripheralDict)
+                }
+                print("found device: \(arr)")
+                result(arr)
+            } else {
+                print("not found device")
+                result([])
+            }
+        }else{
+            result([])
+        }
+    }
+    
     
     // MARK: - Bluetooth Delegate Methods
-    public func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        print("centralManagerDidUpdateState ")
-        statusBLE = central.state == .poweredOn
-    }
-    
+        public func centralManagerDidUpdateState(_ central: CBCentralManager) {
+            print("centralManagerDidUpdateState ")
+            statusBLE = central.state == .poweredOn
+        }
+    //
     public func poSbleUpdatePeripheralList(_ peripherals: [Any]!, rssiList: [Any]!) {
-        print("poSbleUpdatePeripheralList ")
-        if let peripherals = peripherals as? [CBPeripheral], let rssiList = rssiList as? [NSNumber] {
-            self.dataArr = peripherals
-            self.rssiList = rssiList
+            print("poSbleUpdatePeripheralList ")
+            if let peripherals = peripherals as? [CBPeripheral], let rssiList = rssiList as? [NSNumber] {
+                self.dataArr = peripherals
+                self.rssiList = rssiList
+            }
         }
-    }
-    
-    public func poSbleConnect(_ peripheral: CBPeripheral!) {
-            print("poSbleConnect")
-            self.addressCurrent = peripheral.identifier.uuidString
+        
+        public func poSbleConnect(_ peripheral: CBPeripheral!) {
+                print("poSbleConnect")
+                self.addressCurrent = peripheral.identifier.uuidString
+                self.callResult(true)
+                self.isConnectPrinter = true
+        
+        }
+        
+        public func poSbleFail(toConnect peripheral: CBPeripheral!, error: (any Error)!) {
+            print("poSbleFail \(String(describing: error))")
+            DispatchQueue.main.async { [weak self] in
+                self?.callResult(false)
+                self?.isConnectPrinter = false
+            }
+        }
+        
+        public func poSbleDisconnectPeripheral(_ peripheral: CBPeripheral!, error: (any Error)!) {
+            print("poSbleDisconnectPeripheral  \(String(describing: error))")
+            DispatchQueue.main.async { [weak self] in
+                self?.btManager.disconnectRootPeripheral()
+                self?.isConnectPrinter = false
+                self?.callResult(true)
+            }
+        }
+        
+        public func poSbleWriteValue(for character: CBCharacteristic!, error: (any Error)!) {
+            print("poSbleWriteValue  \(String(describing: error))")
+                guard error == nil, character != nil else {
+                    self.callResult(false)
+                    return
+                }
+//            self.callResult(true)
+            
+        }
+        
+        public func poSbleReceiveValue(for characteristic: CBCharacteristic!, error: (any Error)!) {
+            // No action needed
+            print("poSbleReceiveValue  \(String(describing: error))")
+            print("poSbleReceiveValue  \(String(describing: characteristic.description))")
+                guard error == nil, characteristic != nil else {
+                    self.callResult(false)
+                    return
+                }
+        
             self.callResult(true)
-            self.isConnectPrinter = true
-    
-    }
-    
-    public func poSbleFail(toConnect peripheral: CBPeripheral!, error: (any Error)!) {
-        print("poSbleFail \(String(describing: error))")
-        DispatchQueue.main.async { [weak self] in
-            self?.callResult(false)
-            self?.isConnectPrinter = false
         }
-    }
-    
-    public func poSbleDisconnectPeripheral(_ peripheral: CBPeripheral!, error: (any Error)!) {
-        print("poSbleDisconnectPeripheral  \(String(describing: error))")
-        DispatchQueue.main.async { [weak self] in
-//            self?.addressCurrent = ""
-//            self?.btManager.startScan()
-            self?.btManager.disconnectRootPeripheral()
-            self?.isConnectPrinter = false
-            self?.callResult(true)
+        
+        public func poSbleCentralManagerDidUpdateState(_ state: Int) {
+            print("poSbleCentralManagerDidUpdateState \(state.description)")
+            self.isConnectPrinter = false
+            self.dataArr.removeAll()
+            self.dataArr = []
+//            self.btManager.disconnectRootPeripheral()
+            self.btManager.startScan()
+            
         }
-    }
-    
-    public func poSbleWriteValue(for character: CBCharacteristic!, error: (any Error)!) {
-        print("poSbleWriteValue  \(String(describing: error))")
-            guard error == nil, character != nil else {
-                self.callResult(false)
-                return
-            }
-//        self.callResult(true)
-        
-    }
-    
-    public func poSbleReceiveValue(for characteristic: CBCharacteristic!, error: (any Error)!) {
-        // No action needed
-        print("poSbleReceiveValue  \(String(describing: error))")
-        print("poSbleReceiveValue  \(String(describing: characteristic.description))")
-            guard error == nil, characteristic != nil else {
-                self.callResult(false)
-                return
-            }
-        self.callResult(true)
-    }
-    
-    public func poSbleCentralManagerDidUpdateState(_ state: Int) {
-        print("poSbleCentralManagerDidUpdateState \(state.description)")
-        self.isConnectPrinter = false
-        self.dataArr.removeAll()
-        self.dataArr = []
-        self.btManager.disconnectRootPeripheral()
-        self.btManager.startScan()
-        
-    }
     
     // MARK: - Utility Functions
     func monoImg(image: UIImage, threshold: CGFloat = 0.1) -> UIImage? {
