@@ -40,6 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
@@ -68,130 +70,137 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
     private static final int REQUEST_COARSE_LOCATION_PERMISSIONS = 1451;
     static ResultStatus resultStatus = new ResultStatus();
     private static final int PERMISSION_REQUEST_CODE = 1024;
-
+    ExecutorService executor;
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-
-        switch (call.method) {
-            case "getPlatformVersion" -> {
-                result.success("Android " + Build.VERSION.RELEASE);
-            }
-            //  ================>      Xprinter function species printer        <================    //
-            case "connect" -> {
-                String address = call.argument("address");
-                boolean isCloseConnection = Boolean.TRUE.equals(call.argument("isCloseConnection"));
-                String type = call.argument("type");
-                if (address == null || type == null ) {
-                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
-                    return;
-                }
-                xprinter.connect(address, type,isCloseConnection, result);
-            }
-            case "disconnect" -> {
-                String address = call.argument("address");
-                if (address == null) {
-                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
-                    return;
-                }
-                xprinter.disconnect(address, result);
-            }
-            case "printCommand" -> {
-                String address = call.argument("address");
-                String iniCommand = call.argument("iniCommand");
-                String cutterCommands = call.argument("cutterCommands");
-                String img = call.argument("img");
-                String encode = call.argument("encode");
-                boolean isCut = Boolean.TRUE.equals(call.argument("isCut"));
-                boolean isDisconnect = Boolean.TRUE.equals(call.argument("isDisconnect"));
-                boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
-                if (address == null || iniCommand == null || cutterCommands == null || img == null || encode == null) {
-                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
-                    return;
-                }
-                xprinter.print(address,iniCommand,cutterCommands,encode,img,isCut,isDisconnect,isDevicePOS, result);
-            }
-
-            //  ================>      Xprinter libray method        <================    //
-            case "connectMultiXPrinter" -> {
-                String address = call.argument("address");
-                String type = call.argument("type");
-                  if (address == null || type == null) {
-                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
-                    return;
-                }
-                xprinter.connectMultiXPrinter(address, type, result);
-            }
-            case "disconnectXPrinter" -> {
-                String address = call.argument("address");
-                 if (address == null) {
-                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
-                    return;
-                }
-                xprinter.disconnectXPrinter(address, result);
-            }
-            case "removeConnection" -> {
-                String address = call.argument("address");
-                xprinter.removeConnection(address,result);
-            }
-            case "printRawDataESC" -> {
-                String address = call.argument("address");
-                String encode = call.argument("encode");
-                boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
-                 if (address == null || encode == null) {
-                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
-                    return;
-                }
-                xprinter.printRawDataESC(address, encode,isDevicePOS, result);
-            }
-            case "printImgESCX" -> {
-                String address = call.argument("address");
-                String encode = call.argument("encode");
-                Integer width = call.argument("width");
-                boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
-                 if (address == null || encode == null || width == null ) {
-                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
-                    return;
-                }
-                xprinter.printImgESCX(address, encode, isDevicePOS, width, result);
-            }
-            case "cutESCX" -> {
-                String address = call.argument("address");
-                xprinter.cutESCX(address, result);
-            }
-
-            case "USBDiscovery" -> {
-                USBDiscovery(result);
-            }
-            case "getUSBAddress" -> {
-                Integer productId = call.argument("productId");
-                Integer vendorId = call.argument("vendorId");
-                USBAdapter.getUSBAddress(context,productId,vendorId,result);
-            }
-
-            case "tryGetUsbPermission" ->{
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    USBAdapter.tryGetUsbPermission(context);
-                }
-            }
-            case "openBluetoothSettings" ->{
-                if (!hasBluetoothScan()) {
-                    BluetoothAdapters.openBluetoothSettings(activity, result);
-                }else{
-                    result.success(new ArrayList<>());
-                }
-            }
-            case "discovery" -> {
-                String type = call.argument("type");
-                Integer timeout = call.argument("timeout");
-                if (type == null || timeout == null) {
-                    result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
-                    return;
-                }
-                discovery(type,timeout, result);
-            }
-
-            default -> result.notImplemented();
+        if (executor != null) {
+            executor.shutdown();
+            executor = null;
         }
+        executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            switch (call.method) {
+                case "getPlatformVersion" -> {
+                    result.success("Android " + Build.VERSION.RELEASE);
+                }
+                //  ================>      Xprinter function species printer        <================    //
+                case "connect" -> {
+                    String address = call.argument("address");
+                    boolean isCloseConnection = Boolean.TRUE.equals(call.argument("isCloseConnection"));
+                    String type = call.argument("type");
+                    if (address == null || type == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    xprinter.connect(address, type, isCloseConnection, result);
+                }
+                case "disconnect" -> {
+                    String address = call.argument("address");
+                    if (address == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    xprinter.disconnect(address, result);
+                }
+                case "printCommand" -> {
+                    String address = call.argument("address");
+                    String iniCommand = call.argument("iniCommand");
+                    String cutterCommands = call.argument("cutterCommands");
+                    String img = call.argument("img");
+                    Integer width = call.argument("width");
+                    String encode = call.argument("encode");
+                    boolean isCut = Boolean.TRUE.equals(call.argument("isCut"));
+                    boolean isDisconnect = Boolean.TRUE.equals(call.argument("isDisconnect"));
+                    boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
+                    if (address == null || iniCommand == null || cutterCommands == null || img == null || encode == null || width == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    xprinter.print(address, iniCommand, cutterCommands, encode, img, isCut, isDisconnect, isDevicePOS, width, result);
+                }
+
+                //  ================>      Xprinter libray method        <================    //
+                case "connectMultiXPrinter" -> {
+                    String address = call.argument("address");
+                    String type = call.argument("type");
+                    if (address == null || type == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    xprinter.connectMultiXPrinter(address, type, result);
+                }
+                case "disconnectXPrinter" -> {
+                    String address = call.argument("address");
+                    if (address == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    xprinter.disconnectXPrinter(address, result);
+                }
+                case "removeConnection" -> {
+                    String address = call.argument("address");
+                    xprinter.removeConnection(address, result);
+                }
+                case "printRawDataESC" -> {
+                    String address = call.argument("address");
+                    String encode = call.argument("encode");
+                    boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
+                    if (address == null || encode == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    xprinter.printRawDataESC(address, encode, isDevicePOS, result);
+                }
+                case "printImgESCX" -> {
+                    String address = call.argument("address");
+                    String encode = call.argument("encode");
+                    Integer width = call.argument("width");
+                    boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
+                    if (address == null || encode == null || width == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    xprinter.printImgESCX(address, encode, isDevicePOS, width, result);
+                }
+                case "cutESCX" -> {
+                    String address = call.argument("address");
+                    xprinter.cutESCX(address, result);
+                }
+
+                case "USBDiscovery" -> {
+                    USBDiscovery(result);
+                }
+                case "getUSBAddress" -> {
+                    Integer productId = call.argument("productId");
+                    Integer vendorId = call.argument("vendorId");
+                    USBAdapter.getUSBAddress(context, productId, vendorId, result);
+                }
+
+                case "tryGetUsbPermission" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        USBAdapter.tryGetUsbPermission(context);
+                    }
+                }
+                case "openBluetoothSettings" -> {
+                    if (!hasBluetoothScan()) {
+                        BluetoothAdapters.openBluetoothSettings(activity, result);
+                    } else {
+                        result.success(new ArrayList<>());
+                    }
+                }
+                case "discovery" -> {
+                    String type = call.argument("type");
+                    Integer timeout = call.argument("timeout");
+                    if (type == null || timeout == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    discovery(type, timeout, result);
+                }
+
+                default -> result.notImplemented();
+            }
+        });
     }
     public boolean hasBluetoothScan() {
         boolean hasBluetoothScan = ActivityCompat.checkSelfPermission(activity,
@@ -268,24 +277,33 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
 
     @Override
     public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
-        activityBinding = binding;
-        activityBinding.getActivity();
-        activity = binding.getActivity();
-        // Register for activity result
-           binding.addActivityResultListener(
-                   (requestCode, resultCode, data) -> {
-//                       Toast.makeText(context, "Test systems", Toast.LENGTH_SHORT).show();
-                           if (pendingResult != null && resultCode == Activity.RESULT_OK) {
-                               BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        try{
+            activityBinding = binding;
+            activityBinding.getActivity();
+            activity = binding.getActivity();
+            // Register for activity result
+            binding.addActivityResultListener(
+                    (requestCode, resultCode, data) -> {
+                        if (pendingResult != null){
+                            if(resultCode == Activity.RESULT_OK) {
+                                BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
                                 bluetoothDiscovery(bluetoothAdapter, activity, pendingResult);
                                 pendingResult = null;
                                 return true;
-                           }
-                       assert pendingResult != null;
-                       pendingResult.success(new ArrayList<>());
-                       return false;
-                   }
-           );
+                            }
+                            pendingResult.success(new ArrayList<>());
+                            return false;
+                        }else{
+                            return false;
+                        }
+                    }
+            );
+        }catch (Exception e){
+            if(pendingResult != null){
+                pendingResult.error("ERROR", e.toString(), "");
+                pendingResult = null;
+            }
+        }
     }
 
     @Override
@@ -308,7 +326,6 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
     }
     @Override
     public boolean onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-
         if (requestCode == REQUEST_COARSE_LOCATION_PERMISSIONS) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 getBondedDevices(pendingResult);
@@ -322,4 +339,3 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
     }
 
 }
-

@@ -40,17 +40,21 @@ import net.posprinter.TSPLPrinter;
 import net.posprinter.ZPLPrinter;
 import net.posprinter.model.AlgorithmType;
 import net.posprinter.posprinterface.IDataCallback;
+import net.posprinter.posprinterface.IStatusCallback;
 
 import zywell.posprinter.utils.BitmapProcess;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 import io.flutter.plugin.common.MethodChannel;
 import zywell.posprinter.utils.BitmapToByteData;
 
 public class Xprinter {
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Map<String, IDeviceConnection> connections = new HashMap<>();
     int rety = 0;
     int maxRety = 3;
@@ -335,27 +339,6 @@ public class Xprinter {
             result.error(StatusPrinter.ERROR, StatusPrinter.PRINT_FAIL, e.toString());
         }
     }
-    public void statusPrint(POSPrinter printer, @NonNull MethodChannel.Result result){
-        printer.printerCheck(POSConst.STS_TYPE_PRINT, 5000, new IDataCallback() {
-            @Override
-            public void receive(byte[] data) {
-                if (data == null || data.length == 0) {
-                    Log.e("PrinterCheck", "No response from printer");
-                    result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,"No response from printer");
-                    return;
-                }
-                // Example: Bit 5 (0x20) in the first byte indicates "printing busy"
-                boolean isPrinting = (data[0] & 0x20) != 0; // Replace 0x20 with your printer's flag
-                if (isPrinting) {
-                    result.error(StatusPrinter.ERROR,StatusPrinter.PRINT_FAIL ,"Printer is still busy...");
-                    Log.d("PrinterCheck", "Printer is still busy...");
-                } else {
-                    Log.d("PrinterCheck", "Print job likely completed successfully!");
-                    result.success(StatusPrinter.STS_NORMAL);
-                }
-            }
-        });
-    }
     public void printImgESCX(String address, String base64String, boolean isDevicePOS, Integer width, @NonNull MethodChannel.Result result) {
         // Move printing operations to background thread
         new Thread(() -> {
@@ -616,13 +599,10 @@ public class Xprinter {
             }
             IDeviceConnection connection = POSConnect.createDevice(type);
             connections.put(address, connection);
-            connection.connect(address, (code, msg) ->
-                    new Handler(Looper.getMainLooper()).post(() ->
-                            listener(address, code,portType,isCloseConnection, result)
-                    ));
+            connection.connect(address, (code, msg) -> listener(address, code,portType,isCloseConnection, result));
 
         } catch (Exception e) {
-            resultStatus.setResult(result,false);
+            resultStatus.setResultErrorMethod(result,StatusPrinter.CONNECT_ERROR);
         }
 
     }
@@ -638,21 +618,21 @@ public class Xprinter {
                         connect(address, portType,isCloseConnection, result);
                     } else {
                         rety = 0; // Reset retry counter
-                        resultStatus.setResult(result,false);
+                        resultStatus.setResultErrorMethod(result,StatusPrinter.RETRY_FAILED3);
                     }
                 }else{
-                    resultStatus.setResult(result,false);
+                    resultStatus.setResultErrorMethod(result,StatusPrinter.RETRY_FAILED);
                 }
             }
         } catch (Exception e) {
-            resultStatus.setResult(result,false);
+            resultStatus.setResultErrorMethod(result,StatusPrinter.CONNECT_ERROR);
         }
     }
-    public void print(String address,String iniCommand,String cutterCommands, String encode,String img,boolean isCut,boolean isDisconnect, boolean isDevicePOS, @NonNull MethodChannel.Result result) {
+    public void print(String address,String iniCommand,String cutterCommands, String encode,String img,boolean isCut,boolean isDisconnect, boolean isDevicePOS,Integer width, @NonNull MethodChannel.Result result) {
             try {
                 IDeviceConnection connection = connections.get(address);
                 if (connection == null) {
-                    resultStatus.setResult(result,false);
+                    resultStatus.setResultErrorMethod(result,StatusPrinter.CONNECT_ERROR);
                     return;
                 }
                 if (connection.isConnect()) {
@@ -667,7 +647,7 @@ public class Xprinter {
                         if (!img.isEmpty()) {
                             Bitmap bmp = decodeBase64ToBitmap(img);
                             final Bitmap bitmapToPrint = convertGreyImg(bmp);
-                            printer.printBitmap(bitmapToPrint, POSConst.ALIGNMENT_CENTER, 576);
+                            printer.printBitmap(bitmapToPrint, POSConst.ALIGNMENT_CENTER, width);
                         }
                         if (!encode.isEmpty()) {
                             printer.sendData(encodeBytes);
@@ -678,55 +658,68 @@ public class Xprinter {
                          if (isCut && !cutterCommands.isEmpty()) {
                          printer.sendData(endBytes);
                          }
-                            Thread.sleep(500);
-                            status(isDevicePOS, isDisconnect, address, printer, result);
-
+                        Thread.sleep(500);
+                         if(isDevicePOS){
+                             printWithBufferCheck(printer,result);
+                         }else{
+                             status(isDisconnect, address, printer, result);
+                         }
                 } else {
-                    resultStatus.setResult(result,false);
+                    resultStatus.setResultErrorMethod(result,StatusPrinter.CONNECT_ERROR);
                 }
             } catch (Exception e) {
-                resultStatus.setResult(result,false);
+                resultStatus.setResultErrorMethod(result,StatusPrinter.PRINT_FAIL);
             }
 
     }
-    public void status(boolean isDevicePOS,boolean isDisconnect,String address, POSPrinter printer, @NonNull MethodChannel.Result result) {
+    public void printWithBufferCheck(POSPrinter printer, @NonNull MethodChannel.Result result) {
+        executor.submit(() -> {
+        try {
+            byte[] command = { 0x1B, 0x40 }; // ESC @ (initialize)
+            printer.sendData(command).feedLine(0);
+            System.out.println("status printing success");
+            resultStatus.setResult(result,true);
+        } catch (Exception e) {
+            System.out.println("status printing error: " + e.getMessage());
+            resultStatus.setResultErrorMethod(result,e.getMessage());
+        }
+        });
+    }
+    public void status(boolean isDisconnect,String address, POSPrinter printer, @NonNull MethodChannel.Result result) {
             try {
                 printer.printerStatus(status -> {
+                   Log.d("status ","status printing ========> " + status);
                     try {
                         if (isDisconnect) {
                             Thread.sleep(500);
                             checkInitConnection(address);
                         }
                     } catch (InterruptedException e) {
+                        resultStatus.setResultErrorMethod(result,"error :" + e);
                         throw new RuntimeException(e);
                     }
                     rety = 0;
                     switch (status) {
-                        case 0:
-                            resultStatus.setResult(result,true);
+                        case 8:
+                            resultStatus.setResultErrorMethod(result,StatusPrinter.STS_COVEROPEN);
                             break;
-                        case 8, 16, 32, 64:
-                            resultStatus.setResult(result,false);
+                        case 16:
+                            resultStatus.setResultErrorMethod(result,StatusPrinter.STS_PAPEREMPTY);
+                            break;
+                        case 32:
+                            resultStatus.setResultErrorMethod(result,StatusPrinter.STS_PRESS_FEED);
+                            break;
+                        case 64:
+                            resultStatus.setResultErrorMethod(result,StatusPrinter.STS_PRINTER_ERR);
                             break;
                         default:
-                            if (status > 0) {
-                                resultStatus.setResult(result,false);
-                            } else if (status == -4 || status == -65) {
-                                if (isDevicePOS) {
-                                    resultStatus.setResult(result,false);
-                                } else {
-                                    resultStatus.setResult(result,true);
-                                }
-                            } else {
-                                resultStatus.setResult(result,false);
-                            }
+                                resultStatus.setResult(result,true);
                             break;
                     }
                 });
             } catch (Exception e) {
-                resultStatus.setResult(result,false);
+                resultStatus.setResultErrorMethod(result,"status :" + e);
             }
-
     }
     public void disconnect(String address, @NonNull MethodChannel.Result result) {
             try {
@@ -1024,7 +1017,6 @@ public class Xprinter {
                         break;
                     case 64:
                         result.error(StatusPrinter.ERROR, "PRINT_FAIL", "");
-                        msg = "Printer error";
                         break;
                     default:
                         msg = "UNKNOWN";
