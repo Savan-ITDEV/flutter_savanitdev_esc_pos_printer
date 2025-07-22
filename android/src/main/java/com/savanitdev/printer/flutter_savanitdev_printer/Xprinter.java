@@ -628,7 +628,7 @@ public class Xprinter {
             resultStatus.setResultErrorMethod(result,StatusPrinter.CONNECT_ERROR);
         }
     }
-    public void print(String address,String iniCommand,String cutterCommands, String encode,String img,boolean isCut,boolean isDisconnect, boolean isDevicePOS,Integer width, @NonNull MethodChannel.Result result) {
+    public void print(String address,String iniCommand,String cutterCommands, String encode,String img,boolean isCut,boolean isDisconnect, boolean isDevicePOS,boolean isDelay,Integer width, @NonNull MethodChannel.Result result) {
             try {
                 IDeviceConnection connection = connections.get(address);
                 if (connection == null) {
@@ -655,14 +655,16 @@ public class Xprinter {
                         if (isCut && cutterCommands.isEmpty()) {
                             printer.cutHalfAndFeed(0);
                         }
-                         if (isCut && !cutterCommands.isEmpty()) {
-                         printer.sendData(endBytes);
-                         }
+                    if (isCut && !cutterCommands.isEmpty()) {
+                        printer.sendData(endBytes);
+                    }
+                    if(isDelay){
                         Thread.sleep(500);
+                    }
                          if(isDevicePOS){
                              printWithBufferCheck(printer,result);
                          }else{
-                             status(isDisconnect, address, printer, result);
+                             status(isDisconnect, address, printer,isDelay, result);
                          }
                 } else {
                     resultStatus.setResultErrorMethod(result,StatusPrinter.CONNECT_ERROR);
@@ -685,13 +687,15 @@ public class Xprinter {
         }
         });
     }
-    public void status(boolean isDisconnect,String address, POSPrinter printer, @NonNull MethodChannel.Result result) {
+    public void status(boolean isDisconnect,String address, POSPrinter printer,boolean isDelay, @NonNull MethodChannel.Result result) {
             try {
                 printer.printerStatus(status -> {
                    Log.d("status ","status printing ========> " + status);
                     try {
                         if (isDisconnect) {
-                            Thread.sleep(500);
+                            if(isDelay){
+                              Thread.sleep(500);
+                            }
                             checkInitConnection(address);
                         }
                     } catch (InterruptedException e) {

@@ -40,6 +40,7 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
       bool isCut = false,
       bool isDisconnect = false,
       bool isDevicePOS = false,
+      bool isDelay = true,
       int timeout = 30,
       int width = 576});
   Future<String?> connectMultiXPrinter(String address, String type);
@@ -94,12 +95,23 @@ abstract class FlutterSavanitdevPrinterPlatform extends PlatformInterface {
 
 // ============= ZyWell Printer ==================//
 
-  Future<String?> connectZyWell(String address, String type);
-  Future<String?> disconnectZyWell(String address);
+  Future<bool> connectZyWell(String address, String type);
+  Future<bool> disconnectZyWell(String address);
   Future<String?> getPrinterStatusZyWell(String address);
   Future<String?> printRawZyWell(String address, String encode);
-  Future<String?> printImgZyWell(
-      String address, String encode, bool isCut, int width, int cutCount);
+  Future<bool> printImgZyWell(
+       {
+      String iniCommand = "",
+      String cutterCommands = "",
+      String img = "",
+      String encode = "",
+      bool isCut = false,
+      bool isDisconnect = false,
+      bool isDevicePOS = false,
+      int timeout = 30,
+      int width = 576
+      }
+      );
 
   // ============= ESC POS command ==================//
   Future<List<int>> selectAlignment(String align);

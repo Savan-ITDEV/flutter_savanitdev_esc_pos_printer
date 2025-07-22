@@ -29,6 +29,7 @@ class FlutterSavanitdevPrinter {
       bool isCut = false,
       bool isDisconnect = false,
       bool isDevicePOS = false,
+      bool isDelay = true,
       int timeout = 30,
       int width = 576}) {
     return FlutterSavanitdevPrinterPlatform.instance.printCommand(
@@ -40,6 +41,7 @@ class FlutterSavanitdevPrinter {
       isCut: isCut,
       isDisconnect: isDisconnect,
       isDevicePOS: isDevicePOS,
+      isDelay: isDelay,
       timeout: timeout,
       width: width,
     );
@@ -164,12 +166,12 @@ class FlutterSavanitdevPrinter {
   }
 
   // ============= ZyWell Printer ==================//
-  Future<String?> connectZyWell(String address, String type) {
+  Future<bool> connectZyWell(String address, String type) {
     return FlutterSavanitdevPrinterPlatform.instance
         .connectZyWell(address, type);
   }
 
-  Future<String?> disconnectZyWell(String address) {
+  Future<bool> disconnectZyWell(String address) {
     return FlutterSavanitdevPrinterPlatform.instance.disconnectZyWell(address);
   }
 
@@ -183,10 +185,29 @@ class FlutterSavanitdevPrinter {
         .printRawZyWell(address, encode);
   }
 
-  Future<String?> printImgZyWell(
-      String address, String encode, bool isCut, int width, int cutCount) {
+  Future<bool> printImgZyWell(
+     {
+      String iniCommand = "",
+      String cutterCommands = "",
+      String img = "",
+      String encode = "",
+      bool isCut = false,
+      bool isDisconnect = false,
+      bool isDevicePOS = false,
+      int timeout = 30,
+      int width = 576}
+    ) {
     return FlutterSavanitdevPrinterPlatform.instance
-        .printImgZyWell(address, encode, isCut, width, cutCount);
+        .printImgZyWell(
+      iniCommand: iniCommand,
+      cutterCommands: cutterCommands,
+      img: img,
+      encode: encode,
+      isCut: isCut,
+      isDisconnect: isDisconnect,
+      isDevicePOS: isDevicePOS,
+      timeout: timeout,
+      width: width);
   }
 
   // ============= ESC POS command ==================//

@@ -94,7 +94,39 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
                     }
                     xprinter.connect(address, type, isCloseConnection, result);
                 }
-                case "disconnect" -> {
+
+                case "connectZyWell" -> {
+                    String address = call.argument("address");
+                    String type = call.argument("type");
+                    if (address == null || type == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    zywell.connectZyWell(address, type, result);
+                }
+
+                case "disconnectZyWell" -> {
+                    String address = call.argument("address");
+                    if (address == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        return;
+                    }
+                    zywell.disconnect(result);
+                } case "printImgZyWell" -> {
+                    String iniCommand = call.argument("iniCommand");
+                    String cutterCommands = call.argument("cutterCommands");
+                    String img = call.argument("img");
+                    Integer width = call.argument("width");
+                    String encode = call.argument("encode");
+                    boolean isCut = Boolean.TRUE.equals(call.argument("isCut"));
+                    boolean isDisconnect = Boolean.TRUE.equals(call.argument("isDisconnect"));
+                    if (iniCommand == null || cutterCommands == null || img == null || encode == null || width == null) {
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null parameter!");
+                        return;
+                    }
+                    zywell.printImgZyWell(iniCommand,cutterCommands,img,encode,isDisconnect, isCut, width, result);
+
+                }  case "disconnect" -> {
                     String address = call.argument("address");
                     if (address == null) {
                         result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
@@ -110,13 +142,14 @@ public class FlutterSavanitdevPrinterPlugin implements  FlutterPlugin, ActivityA
                     Integer width = call.argument("width");
                     String encode = call.argument("encode");
                     boolean isCut = Boolean.TRUE.equals(call.argument("isCut"));
+                    boolean isDelay = Boolean.TRUE.equals(call.argument("isDelay"));
                     boolean isDisconnect = Boolean.TRUE.equals(call.argument("isDisconnect"));
                     boolean isDevicePOS = Boolean.TRUE.equals(call.argument("isDevicePOS"));
                     if (address == null || iniCommand == null || cutterCommands == null || img == null || encode == null || width == null) {
-                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null");
+                        result.error(StatusPrinter.ERROR, StatusPrinter.CONNECT_ERROR, "Printer get null parameter");
                         return;
                     }
-                    xprinter.print(address, iniCommand, cutterCommands, encode, img, isCut, isDisconnect, isDevicePOS, width, result);
+                    xprinter.print(address, iniCommand, cutterCommands, encode, img, isCut, isDisconnect, isDevicePOS, isDelay, width, result);
                 }
 
                 //  ================>      Xprinter libray method        <================    //

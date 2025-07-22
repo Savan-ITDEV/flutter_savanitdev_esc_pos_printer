@@ -102,6 +102,7 @@ class MethodChannelFlutterSavanitdevPrinter
     bool isCut = false,
     bool isDisconnect = false,
     bool isDevicePOS = false,
+    bool isDelay = true,
     int timeout = 30,
     int width = 576,
   }) async {
@@ -115,6 +116,7 @@ class MethodChannelFlutterSavanitdevPrinter
         'isCut': isCut,
         'isDisconnect': isDisconnect,
         'isDevicePOS': isDevicePOS,
+        'isDelay': isDelay,
         'width': width,
       }).timeout(
         Duration(seconds: timeout), // กำหนด Timeout 30
@@ -348,9 +350,9 @@ class MethodChannelFlutterSavanitdevPrinter
 // ============= ZyWell Printer ==================//
 
   @override
-  Future<String?> connectZyWell(String address, String type) async {
+  Future<bool> connectZyWell(String address, String type) async {
     final version = await methodChannel
-        .invokeMethod<String>('connectZyWell', <String, dynamic>{
+        .invokeMethod('connectZyWell', <String, dynamic>{
       'address': address,
       'type': type,
     });
@@ -358,9 +360,9 @@ class MethodChannelFlutterSavanitdevPrinter
   }
 
   @override
-  Future<String?> disconnectZyWell(String address) async {
+  Future<bool> disconnectZyWell(String address) async {
     final version = await methodChannel
-        .invokeMethod<String>('disconnectZyWell', <String, dynamic>{
+        .invokeMethod('disconnectZyWell', <String, dynamic>{
       'address': address,
     });
     return version;
@@ -386,15 +388,27 @@ class MethodChannelFlutterSavanitdevPrinter
   }
 
   @override
-  Future<String?> printImgZyWell(String address, String encode, bool isCut,
-      int width, int cutCount) async {
+  Future<bool> printImgZyWell({
+    String iniCommand = "",
+    String cutterCommands = "",
+    String img = "",
+    String encode = "",
+    bool isCut = false,
+    bool isDisconnect = false,
+    bool isDevicePOS = false,
+    int timeout = 30,
+    int width = 576,
+  }) async {
     final version =
         await methodChannel.invokeMethod('printImgZyWell', <dynamic, dynamic>{
-      'address': address,
-      'encode': encode,
-      'isCut': isCut,
-      'width': width,
-      'cutCount': cutCount,
+        'iniCommand': iniCommand,
+        'cutterCommands': cutterCommands,
+        'img': img,
+        'encode': encode,
+        'isCut': isCut,
+        'isDisconnect': isDisconnect,
+        'isDevicePOS': isDevicePOS,
+        'width': width,
     });
     return version;
   }

@@ -38,6 +38,7 @@ class MockFlutterSavanitdevPrinterPlatform
       bool isCut = false,
       bool isDisconnect = false,
       bool isDevicePOS = false,
+      bool isDelay = false,
       int timeout = 30,
       int width = 576}) {
     // TODO: implement printCommand
@@ -197,7 +198,16 @@ class MockFlutterSavanitdevPrinterPlatform
 
   @override
   Future<String?> printImgZyWell(
-      String address, String encode, bool isCut, int width, int cutCount) {
+    {String address = "",
+      String iniCommand = "",
+      String cutterCommands = "",
+      String img = "",
+      String encode = "",
+      bool isCut = false,
+      bool isDisconnect = false,
+      bool isDevicePOS = false,
+      int timeout = 30,
+      int width = 576}) {
     // TODO: implement startQuickDiscovery
     throw UnimplementedError();
   }
